@@ -44,6 +44,150 @@ EGoclaw 是一个桌面 App，不是 Web 产品。
 
 ---
 
+## 项目如何跑起来
+
+### 1. 环境要求
+
+需要本地具备：
+
+1. Node.js 22+
+2. npm 10+
+3. 桌面图形环境
+
+说明：
+
+1. `npm run smoke` 不需要 GUI
+2. `npm start` 需要本地桌面图形环境才能真正拉起 Electron 窗口
+
+### 2. 安装依赖
+
+在项目根目录执行：
+
+```bash
+npm install
+```
+
+### 3. 配置 Kimi
+
+推荐方式一：使用环境变量
+
+```bash
+export KIMI_API_KEY="你的 Kimi Key"
+export KIMI_BASE_URL="https://api.moonshot.ai/v1"
+export KIMI_MODEL="kimi-k2"
+```
+
+推荐方式二：使用 `.env.local`
+
+先复制模板：
+
+```bash
+cp .env.example .env.local
+```
+
+然后把 `.env.local` 改成：
+
+```bash
+KIMI_API_KEY=你的_Kimi_Key
+KIMI_BASE_URL=https://api.moonshot.ai/v1
+KIMI_MODEL=kimi-k2
+```
+
+注意：
+
+1. 不要把真实 key 提交到仓库
+2. 当前 Agent 层支持没有 key 时的 fallback 逻辑
+3. 没有 key 也能跑 Demo，但多智能体输出会退回本地规则结果
+
+### 4. 先跑无界面检查
+
+先执行：
+
+```bash
+npm run check
+```
+
+作用：
+
+1. 检查主应用、桌宠、主进程和脚本入口的语法是否正确
+
+### 5. 跑无 GUI 的 Demo smoke test
+
+执行：
+
+```bash
+npm run smoke
+```
+
+预期结果：
+
+1. 输出 `connected: true`
+2. 输出 `current_intent`
+3. 输出 `current_action`
+4. 输出 `pet_message`
+
+这说明：
+
+1. 收藏样本已进入系统
+2. Agent 管线已跑通
+3. 当前意图、当前动作和桌宠提醒已经生成
+
+### 6. 启动桌面 App
+
+执行：
+
+```bash
+npm start
+```
+
+启动后会发生：
+
+1. 打开主应用窗口
+2. 打开桌宠独立窗口
+3. 主进程开始轮询前台应用
+4. 如果检测到抖音前台，会触发桌宠提醒逻辑
+
+### 7. 当前 Demo 怎么操作
+
+进入主应用后，建议按下面顺序验证：
+
+1. 点击 `连接 Demo 收藏夹`
+2. 等待收藏样本进入系统
+3. 在首页查看当前主意图和当前动作
+4. 在 `同步中心` 查看 Agent 处理链路
+5. 在 `成长地图` 查看知识图谱
+6. 在 `内容蒸馏` 查看视频如何被转成 skill
+7. 点击顶部的：
+   - `模拟打开抖音`
+   - `模拟今晚空闲`
+   - `模拟中断重启`
+8. 观察桌宠窗口文案变化
+9. 点击桌宠的：
+   - `现在开始`
+   - `查看路径`
+   - `晚点提醒`
+   - `不是这个`
+
+### 8. 如果 `npm start` 起不来
+
+常见原因：
+
+1. 当前环境没有 GUI
+2. 当前环境不允许 Electron 打开图形窗口
+3. macOS 权限或沙箱限制导致 Electron 进程退出
+
+遇到这种情况时：
+
+1. 先跑 `npm run check`
+2. 再跑 `npm run smoke`
+
+只要这两个成功，说明：
+
+1. 代码结构和 Agent 主链路是通的
+2. 剩下的问题通常是本地 GUI 环境，不是业务逻辑本身
+
+---
+
 ## 目标目录结构
 
 建议后续重构为下面这套结构：

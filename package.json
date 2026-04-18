@@ -1,0 +1,16 @@
+{
+  "name": "egoclaw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main-process/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "smoke": "node scripts/demo-smoke.js",
+    "check": "node --check desktop-app/renderer/app.js && node --check pet-runtime/pet.js && node --check main-process/main.js && node --check scripts/demo-smoke.js"
+  },
+  "dependencies": {
+    "electron": "^35.0.0"
+  }
+}

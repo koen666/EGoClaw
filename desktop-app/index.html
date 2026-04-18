@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EGoclaw</title>
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <div id="onboarding" class="onboarding-shell">
+      <div class="onboarding-card">
+        <div class="onboarding-copy">
+          <p class="eyebrow">EGoclaw / 灵宝</p>
+          <h1>把收藏夹里埋没的热爱，整理成属于你的成长地图。</h1>
+          <p class="lead">
+            这版 Demo 会模拟收藏样本进入系统、多 Agent 蒸馏、图谱构建、灵宝提醒和行动规划。
+          </p>
+          <div id="setup-steps" class="setup-list"></div>
+        </div>
+        <div class="onboarding-side">
+          <img class="onboarding-pet" src="../assets/lingbao-placeholder.svg" alt="灵宝" />
+          <button id="connect-demo" class="primary-button">连接 Demo 收藏夹</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">EGoclaw</p>
+          <h2>灵宝桌面成长搭子</h2>
+          <p class="muted">
+            软件层负责理解与图谱，灵宝负责在合适的时候把你拉回现在最值得开始的一步。
+          </p>
+        </div>
+
+        <nav id="nav-list" class="nav-list"></nav>
+
+        <div id="sidebar-intent" class="sidebar-card"></div>
+        <div id="sidebar-memory" class="sidebar-card"></div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">当前页面</p>
+            <h1 id="page-title">首页总览</h1>
+          </div>
+          <div class="topbar-actions">
+            <span id="status-badge" class="status-badge">等待连接</span>
+            <button id="simulate-douyin" class="secondary-button">模拟打开抖音</button>
+            <button id="simulate-evening" class="secondary-button">模拟今晚空闲</button>
+            <button id="simulate-resume" class="secondary-button">模拟中断重启</button>
+            <button id="rerun-pipeline" class="primary-button">重跑 Agent</button>
+          </div>
+        </header>
+
+        <section class="page is-active" data-page="home">
+          <div class="page-grid home-grid">
+            <div class="panel hero-panel">
+              <p class="eyebrow">当前主意图</p>
+              <h2 id="home-intent-title"></h2>
+              <p id="home-intent-summary" class="lead"></p>
+              <div class="hero-actions">
+                <button id="go-action" class="primary-button">开始当前动作</button>
+                <button id="go-dialogue" class="secondary-button">问问灵宝为什么</button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当前动作</p>
+                  <h3>现在最值得开始的一步</h3>
+                </div>
+              </div>
+              <div id="home-action"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">热爱方向</p>
+                  <h3>Top 3 路径</h3>
+                </div>
+              </div>
+              <div id="home-intent-list" class="stack-list"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">最近一次提醒</p>
+                  <h3>灵宝为什么出现</h3>
+                </div>
+              </div>
+              <div id="home-nudge-history" class="stack-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="sync">
+          <div class="page-grid sync-grid">
+            <div class="panel full-span">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">同步中心</p>
+                  <h3>收藏内容进入系统后的处理链路</h3>
+                </div>
+              </div>
+              <div id="sync-agent-list" class="agent-grid"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">原始收藏</p>
+                  <h3>同步内容</h3>
+                </div>
+              </div>
+              <div id="sync-videos" class="stack-list"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Agent 输出</p>
+                  <h3>当前视频理解结果</h3>
+                </div>
+              </div>
+              <div id="sync-detail"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="map">
+          <div class="page-grid map-grid">
+            <div class="panel full-span">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">成长地图</p>
+                  <h3>外部个人知识图谱</h3>
+                </div>
+              </div>
+              <div class="graph-frame">
+                <svg id="graph" viewBox="0 0 1000 520"></svg>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当前路径</p>
+                  <h3>路径摘要</h3>
+                </div>
+              </div>
+              <div id="map-focus"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">记忆沉淀</p>
+                  <h3>skill.md / soul.md</h3>
+                </div>
+              </div>
+              <div id="map-memory" class="stack-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="distill">
+          <div class="page-grid split-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">内容蒸馏</p>
+                  <h3>结构化 skill</h3>
+                </div>
+              </div>
+              <div id="distill-list" class="stack-list"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">蒸馏详情</p>
+                  <h3>证据与输出</h3>
+                </div>
+              </div>
+              <div id="distill-detail"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="action">
+          <div class="page-grid action-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当前行动</p>
+                  <h3>从想学到开始</h3>
+                </div>
+              </div>
+              <div id="action-overview"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">行动拆解</p>
+                  <h3>一步一步做</h3>
+                </div>
+              </div>
+              <div id="action-steps" class="stack-list"></div>
+            </div>
+            <div class="panel full-span">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">支撑视频</p>
+                  <h3>和当前动作关联的收藏</h3>
+                </div>
+              </div>
+              <div id="support-videos" class="card-grid"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="dialogue">
+          <div class="page-grid split-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">对话与解释</p>
+                  <h3>直接和 EGoclaw 对话</h3>
+                </div>
+              </div>
+              <div id="chat-messages" class="chat-messages"></div>
+              <div class="quick-row">
+                <button class="secondary-button quick-question" data-question="为什么提醒我这个？">为什么提醒我这个？</button>
+                <button class="secondary-button quick-question" data-question="把我的收藏整理一下">把我的收藏整理一下</button>
+                <button class="secondary-button quick-question" data-question="我今天最该开始什么？">我今天最该开始什么？</button>
+              </div>
+              <form id="chat-form" class="chat-form">
+                <input id="chat-input" type="text" placeholder="问灵宝：为什么提醒我这个？" />
+                <button class="primary-button" type="submit">发送</button>
+              </form>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">当前解释</p>
+                  <h3>判断依据</h3>
+                </div>
+              </div>
+              <div id="dialogue-detail"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="settings">
+          <div class="page-grid split-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">设置</p>
+                  <h3>桌宠与同步行为</h3>
+                </div>
+              </div>
+              <div id="settings-list" class="stack-list"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">运行日志</p>
+                  <h3>系统事件</h3>
+                </div>
+              </div>
+              <div id="logs" class="stack-list"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./renderer/app.js"></script>
+  </body>
+</html>
