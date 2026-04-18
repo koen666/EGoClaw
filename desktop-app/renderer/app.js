@@ -5,17 +5,22 @@ const NAV_ITEMS = [
   ["dialogue", "◌", "Dialogue"]
 ];
 
+const GRAPH_VIEWBOX = {
+  x: 0,
+  y: 0,
+  width: 760,
+  height: 560
+};
+
 const state = {
   snapshot: null,
   authMode: "login",
   chatHistoryCollapsed: false,
-  graphViewport: {
-    x: 0,
-    y: 0,
-    width: 1000,
-    height: 520
-  },
-  graphDrag: null
+  graphViewport: { ...GRAPH_VIEWBOX },
+  graphLayoutKey: "",
+  graphDrag: null,
+  graphCompleted: new Set(),
+  graphAnimating: new Set()
 };
 
 const refs = {
@@ -122,6 +127,7 @@ function bindEvents() {
 
   refs.graph.addEventListener("pointerdown", (event) => {
     if (!state.snapshot?.graph?.nodes?.length) return;
+    if (event.target.closest?.(".graph-node")) return;
     state.graphDrag = {
       pointerId: event.pointerId,
       clientX: event.clientX,
@@ -253,15 +259,18 @@ function renderMap() {
 }
 
 function renderDistill() {
-  refs.distillList.innerHTML = state.snapshot.distilledVideos.length
-    ? state.snapshot.distilledVideos.map((video) => skillCard(video, state.snapshot.activeVideoId === video.videoId)).join("")
+  const visibleVideos = (state.snapshot.distilledVideos || []).slice(0, 2);
+  const activeVisibleVideo = visibleVideos.find((video) => video.videoId === state.snapshot.activeVideoId) || visibleVideos[0] || null;
+
+  refs.distillList.innerHTML = visibleVideos.length
+    ? visibleVideos.map((video) => skillCard(video, activeVisibleVideo?.videoId === video.videoId)).join("")
     : `<div class="skill-card"><div class="skill-head"><span class="skill-category">Pending</span><span class="skill-meta">--</span></div><h3>等待同步</h3><p>同步收藏夹后这里会生成蒸馏结果。</p></div>`;
 
   refs.distillList.querySelectorAll("[data-video-id]").forEach((button) => {
     button.addEventListener("click", () => window.egoclawApp.selectVideo(button.dataset.videoId));
   });
 
-  const video = currentVideo();
+  const video = activeVisibleVideo;
   refs.distillDetail.innerHTML = video
     ? detailCard(video.skill, [
         ["Topic", video.topic],
@@ -307,71 +316,46 @@ function renderDialogue() {
 
 function renderGraph() {
   refs.graph.innerHTML = "";
-  applyGraphViewport();
   const nodes = state.snapshot.graph.nodes || [];
   const edges = state.snapshot.graph.edges || [];
+  const layout = computeGraphLayout(nodes, edges);
 
-  const layout = {
-    goal_self: { x: 500, y: 440 },
-    intent_expression: { x: 220, y: 170 },
-    intent_breakfast: { x: 470, y: 140 },
-    intent_ppt: { x: 740, y: 170 },
-    intent_photo: { x: 620, y: 360 }
-  };
+  if (layout.key !== state.graphLayoutKey) {
+    state.graphLayoutKey = layout.key;
+    state.graphViewport = { ...GRAPH_VIEWBOX };
+  }
 
-  const computedNodes = nodes.map((node, index) => {
-    if (node.type === "goal") return { ...node, ...layout.goal_self };
-    if (node.type === "intent") return { ...node, ...(layout[`intent_${node.intentId}`] || { x: 160 + index * 140, y: 160 }) };
-    const root = layout[`intent_${node.intentId}`] || { x: 240, y: 260 };
-    return {
-      ...node,
-      x: root.x + (node.type === "skill" ? -70 + (node.order || 0) * 130 : 0),
-      y: root.y + (node.type === "skill" ? 120 : 220)
-    };
-  });
+  applyGraphViewport();
 
-  edges.forEach((edge) => {
-    const from = computedNodes.find((node) => node.id === edge.from);
-    const to = computedNodes.find((node) => node.id === edge.to);
+  layout.edges.forEach((edge) => {
+    const from = layout.nodes.find((node) => node.id === edge.from);
+    const to = layout.nodes.find((node) => node.id === edge.to);
     if (!from || !to) return;
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", from.x);
-    line.setAttribute("y1", from.y);
-    line.setAttribute("x2", to.x);
-    line.setAttribute("y2", to.y);
-    line.setAttribute("stroke", "#1A1A1A");
-    line.setAttribute("stroke-opacity", "0.18");
+    line.setAttribute("x1", String(from.x));
+    line.setAttribute("y1", String(from.y));
+    line.setAttribute("x2", String(to.x));
+    line.setAttribute("y2", String(to.y));
+    line.setAttribute("stroke", to.color || "#2D4BF0");
+    line.setAttribute("stroke-opacity", "0.2");
     line.setAttribute("stroke-width", "1");
     refs.graph.appendChild(line);
   });
 
-  computedNodes.forEach((node) => {
-    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    const primary = node.type === "goal" || node.type === "intent";
-    const fill = primary ? "#1A1A1A" : "rgba(45,75,240,0.06)";
-    const stroke = primary ? "#1A1A1A" : "#2D4BF0";
-    const width = primary ? 132 : 112;
-    const height = primary ? 72 : 56;
-    rect.setAttribute("x", String(node.x - width / 2));
-    rect.setAttribute("y", String(node.y - height / 2));
-    rect.setAttribute("width", String(width));
-    rect.setAttribute("height", String(height));
-    rect.setAttribute("fill", fill);
-    rect.setAttribute("stroke", stroke);
-    rect.setAttribute("stroke-width", "1");
-    refs.graph.appendChild(rect);
-
-    text.setAttribute("x", String(node.x));
-    text.setAttribute("y", String(node.y + 5));
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("font-size", primary ? "15" : "13");
-    text.setAttribute("font-family", "Libre Baskerville");
-    text.setAttribute("font-style", "italic");
-    text.setAttribute("fill", primary ? "#ffffff" : "#1A1A1A");
-    text.textContent = node.label;
-    refs.graph.appendChild(text);
+  layout.nodes.forEach((node) => {
+    refs.graph.appendChild(createGraphNode(node));
   });
+}
+
+function markGraphNodeComplete(nodeId) {
+  if (!nodeId) return;
+  state.graphCompleted.add(nodeId);
+  state.graphAnimating.add(nodeId);
+  renderGraph();
+  window.setTimeout(() => {
+    state.graphAnimating.delete(nodeId);
+    renderGraph();
+  }, 900);
 }
 
 function applyGraphViewport() {
@@ -422,6 +406,278 @@ function endGraphDrag(event) {
   refs.graph.releasePointerCapture(event.pointerId);
   refs.graph.classList.remove("is-dragging");
   state.graphDrag = null;
+}
+
+function computeGraphLayout(nodes, edges) {
+  const intentNodes = nodes
+    .filter((node) => node.type === "intent")
+    .sort((left, right) => (left.order || 0) - (right.order || 0));
+  const skillNodes = nodes
+    .filter((node) => node.type === "skill")
+    .sort((left, right) => (left.intentId || "").localeCompare(right.intentId || "") || (left.order || 0) - (right.order || 0));
+
+  const growthMapPresets = [
+    {
+      x: 180,
+      y: 180,
+      size: 112,
+      skillOffsets: [
+        { x: -170, y: -145 },
+        { x: 178, y: -110 },
+        { x: 176, y: 82 },
+        { x: -176, y: 110 }
+      ]
+    },
+    {
+      x: 615,
+      y: 340,
+      size: 102,
+      skillOffsets: [
+        { x: 176, y: -132 },
+        { x: 212, y: 22 },
+        { x: 144, y: 142 },
+        { x: -72, y: -166 }
+      ]
+    },
+    {
+      x: 205,
+      y: 410,
+      size: 106,
+      skillOffsets: [
+        { x: 214, y: 58 },
+        { x: 118, y: -148 },
+        { x: 246, y: -54 },
+        { x: 156, y: 136 }
+      ]
+    },
+    {
+      x: 650,
+      y: 160,
+      size: 104,
+      skillOffsets: [
+        { x: -186, y: -132 },
+        { x: -226, y: 28 },
+        { x: -148, y: 152 },
+        { x: 112, y: -140 }
+      ]
+    }
+  ];
+
+  const positionedNodes = [];
+  const positionedEdges = [];
+
+  intentNodes.forEach((intent, index) => {
+    const anchor = growthMapPresets[index] || getFallbackGrowthAnchor(index);
+    const clusterSkills = skillNodes.filter((node) => node.intentId === intent.intentId);
+
+    positionedNodes.push({
+      ...intent,
+      visualType: "intent",
+      x: anchor.x,
+      y: anchor.y,
+      size: anchor.size,
+      color: "#1A1A1A"
+    });
+
+    clusterSkills.forEach((skill, skillIndex) => {
+      const offset = anchor.skillOffsets[skillIndex] || getFallbackSkillOffset(skillIndex, index);
+      positionedNodes.push({
+        ...skill,
+        visualType: "skill",
+        x: anchor.x + offset.x,
+        y: anchor.y + offset.y,
+        size: 84 - Math.min(skillIndex, 2) * 4,
+        color: "#2D4BF0"
+      });
+      positionedEdges.push({
+        from: intent.id,
+        to: skill.id
+      });
+    });
+  });
+
+  if (!positionedEdges.length) {
+    edges
+      .filter((edge) => edge.type === "contains")
+      .forEach((edge) => {
+        if (positionedNodes.some((node) => node.id === edge.from) && positionedNodes.some((node) => node.id === edge.to)) {
+          positionedEdges.push(edge);
+        }
+      });
+  }
+
+  return {
+    key: positionedNodes.map((node) => node.id).join("|"),
+    nodes: positionedNodes,
+    edges: positionedEdges
+  };
+}
+
+function getFallbackGrowthAnchor(index) {
+  const fallbackAnchors = [
+    { x: 240, y: 240, size: 96, skillOffsets: [{ x: -168, y: -118 }, { x: 168, y: -118 }, { x: 176, y: 68 }] },
+    { x: 560, y: 240, size: 96, skillOffsets: [{ x: -168, y: -118 }, { x: 168, y: -118 }, { x: 176, y: 68 }] },
+    { x: 240, y: 450, size: 96, skillOffsets: [{ x: 176, y: 68 }, { x: 112, y: -144 }, { x: 206, y: -84 }] },
+    { x: 560, y: 450, size: 96, skillOffsets: [{ x: -176, y: 68 }, { x: -112, y: -144 }, { x: -206, y: -84 }] }
+  ];
+
+  return fallbackAnchors[index % fallbackAnchors.length];
+}
+
+function getFallbackSkillOffset(skillIndex, clusterIndex) {
+  const angleSets = [
+    [-0.9, 0.1, 1.1, 2.1],
+    [-2.2, -1.2, -0.2, 0.8],
+    [-0.4, -1.2, 0.6, 1.4],
+    [-2.6, -1.8, -0.9, 0.2]
+  ];
+  const angle = angleSets[clusterIndex % angleSets.length][skillIndex % 4];
+  const radius = 205 + Math.floor(skillIndex / 4) * 52;
+
+  return {
+    x: Math.round(Math.cos(angle) * radius),
+    y: Math.round(Math.sin(angle) * radius)
+  };
+}
+
+function createGraphNode(node) {
+  const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const body = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const primary = node.visualType === "intent";
+  const size = node.size || (primary ? 108 : 84);
+  const labelLines = wrapNodeLabel(node.label, primary ? 4 : 5, 2);
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+
+  group.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+  group.setAttribute("class", "graph-node");
+  group.setAttribute("tabindex", "0");
+  group.setAttribute("role", "button");
+  group.setAttribute("aria-label", `${node.label}，点击标记完成`);
+  body.setAttribute("class", "graph-node-body");
+
+  if (state.graphCompleted.has(node.id)) {
+    group.classList.add("is-complete");
+  }
+  if (state.graphAnimating.has(node.id)) {
+    group.classList.add("is-completing");
+  }
+
+  rect.setAttribute("x", String(-size / 2));
+  rect.setAttribute("y", String(-size / 2));
+  rect.setAttribute("width", String(size));
+  rect.setAttribute("height", String(size));
+  rect.setAttribute("fill", node.color || (primary ? "#1A1A1A" : "#2D4BF0"));
+  rect.setAttribute("fill-opacity", primary ? "1" : "0.05");
+  rect.setAttribute("stroke", node.color || (primary ? "#1A1A1A" : "#2D4BF0"));
+  rect.setAttribute("stroke-width", primary ? "1" : "1.4");
+  body.appendChild(rect);
+
+  appendNodeIcon(body, node, primary ? "#ffffff" : "#2f3d77");
+
+  label.setAttribute("x", "0");
+  label.setAttribute("text-anchor", "middle");
+  label.setAttribute("font-size", primary ? "20" : "15");
+  label.setAttribute("font-family", primary ? "\"Libre Baskerville\", serif" : "\"Noto Serif SC\", \"Libre Baskerville\", serif");
+  label.setAttribute("font-style", "italic");
+  label.setAttribute("fill", primary ? "#ffffff" : "#1a1a1a");
+
+  labelLines.forEach((line, index) => {
+    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+    tspan.setAttribute("x", "0");
+    tspan.setAttribute("y", String(primary ? 22 + index * 17 : 17 + index * 15));
+    tspan.textContent = line;
+    label.appendChild(tspan);
+  });
+
+  body.appendChild(label);
+  group.appendChild(body);
+  group.addEventListener("click", (event) => {
+    event.stopPropagation();
+    markGraphNodeComplete(node.id);
+  });
+  group.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    markGraphNodeComplete(node.id);
+  });
+  return group;
+}
+
+function appendNodeIcon(group, node, stroke) {
+  const icon = resolveNodeIcon(node);
+  const iconGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  iconGroup.setAttribute("transform", `translate(0 ${node.visualType === "intent" ? -22 : -17})`);
+  iconGroup.setAttribute("fill", "none");
+  iconGroup.setAttribute("stroke", stroke);
+  iconGroup.setAttribute("stroke-width", node.visualType === "intent" ? "2.2" : "1.8");
+  iconGroup.setAttribute("stroke-linecap", "round");
+  iconGroup.setAttribute("stroke-linejoin", "round");
+
+  if (icon === "camera") {
+    appendPath(iconGroup, "M -10 -3 h 20 a 2 2 0 0 1 2 2 v 10 a 2 2 0 0 1 -2 2 h -20 a 2 2 0 0 1 -2 -2 v -10 a 2 2 0 0 1 2 -2 z");
+    appendPath(iconGroup, "M -4 -7 h 8");
+    appendCircle(iconGroup, 0, 4, node.visualType === "intent" ? 4.5 : 3.8);
+  } else if (icon === "bolt") {
+    appendPath(iconGroup, "M -4 -10 L 4 -10 L -1 -1 L 6 -1 L -6 12 L -1 2 L -7 2 Z");
+  } else if (icon === "bowl") {
+    appendPath(iconGroup, "M -10 -1 H 10");
+    appendPath(iconGroup, "M -8 -1 C -7 7 -4 11 0 11 C 4 11 7 7 8 -1");
+    appendPath(iconGroup, "M -3 -7 C -1 -10 1 -10 3 -7");
+  } else if (icon === "bulb") {
+    appendPath(iconGroup, "M 0 -10 a 7 7 0 0 1 5.6 11.2 c -1.1 1.4 -1.7 2.4 -1.8 3.8 h -7.6 c -0.1 -1.4 -0.7 -2.4 -1.8 -3.8 A 7 7 0 0 1 0 -10");
+    appendPath(iconGroup, "M -3 8 h 6");
+    appendPath(iconGroup, "M -2 11 h 4");
+  } else {
+    appendPath(iconGroup, "M -11 -8 v 16");
+    appendPath(iconGroup, "M 11 -8 v 16");
+    appendPath(iconGroup, "M -11 -8 C -5 -6 -3 -4 0 0 C 3 -4 5 -6 11 -8");
+    appendPath(iconGroup, "M -11 8 C -5 6 -3 4 0 0 C 3 4 5 6 11 8");
+    appendPath(iconGroup, "M 0 -2 v 6");
+  }
+
+  group.appendChild(iconGroup);
+}
+
+function resolveNodeIcon(node) {
+  if (node.visualType === "skill") return "bulb";
+
+  if (/摄|构图/.test(node.label)) return "camera";
+  if (/PPT|AI|大纲/.test(node.label)) return "bolt";
+  if (/早餐|燕麦|减脂/.test(node.label)) return "bowl";
+  return "book";
+}
+
+function appendPath(group, d) {
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", d);
+  group.appendChild(path);
+}
+
+function appendCircle(group, cx, cy, r) {
+  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  circle.setAttribute("cx", String(cx));
+  circle.setAttribute("cy", String(cy));
+  circle.setAttribute("r", String(r));
+  group.appendChild(circle);
+}
+
+function wrapNodeLabel(label, lineLength, maxLines) {
+  const compact = String(label || "")
+    .replace(/\s+/g, "")
+    .replace(/。$/, "");
+  if (!compact) return ["未命名"];
+
+  const lines = [];
+  for (let index = 0; index < compact.length && lines.length < maxLines; index += lineLength) {
+    lines.push(compact.slice(index, index + lineLength));
+  }
+
+  if (compact.length > lineLength * maxLines) {
+    lines[maxLines - 1] = `${lines[maxLines - 1].slice(0, Math.max(0, lineLength - 1))}…`;
+  }
+
+  return lines;
 }
 
 function detailCard(title, rows) {
