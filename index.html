@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EGoclaw Demo</title>
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">EGoclaw / 灵宝 Demo</p>
+          <h1>把收藏夹里埋没的热爱，整理成属于你的成长地图</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-pill status-pill-live">抖音同步状态: Mock Connected</span>
+          <button id="reset-demo" class="ghost-button">重置 Demo</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel panel-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">软件层</p>
+            <h2>收藏内容 -> 蒸馏 -> 图谱 -> 意图 -> 下一步</h2>
+            <p>
+              Demo 当前模拟用户的抖音收藏夹已经同步。系统会自动蒸馏视频内容，构建个人知识图谱，并在上下文满足时由灵宝主动提醒。
+            </p>
+          </div>
+          <div class="hero-metrics" id="hero-metrics"></div>
+        </section>
+
+        <section class="panel panel-context">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">触发器</p>
+              <h2>上下文触发面板</h2>
+            </div>
+            <p class="heading-note">点击任一场景，模拟桌宠在 App 常驻时收到触发。</p>
+          </div>
+          <div class="trigger-grid" id="trigger-grid"></div>
+        </section>
+
+        <section class="panel panel-map">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">知识图谱</p>
+              <h2>热爱成长地图</h2>
+            </div>
+            <button id="focus-current-intent" class="ghost-button">聚焦当前意图</button>
+          </div>
+          <div class="graph-frame">
+            <svg id="growth-map" viewBox="0 0 860 460" aria-label="growth map"></svg>
+          </div>
+        </section>
+
+        <section class="panel panel-distill">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">内容蒸馏</p>
+              <h2>收藏视频结构化结果</h2>
+            </div>
+            <p class="heading-note">视频 -> topic / skill / action / friction</p>
+          </div>
+          <div class="card-list" id="distill-list"></div>
+        </section>
+
+        <section class="panel panel-action">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">当前动作</p>
+              <h2>现在最值得开始的一步</h2>
+            </div>
+          </div>
+          <div id="action-card" class="action-card"></div>
+        </section>
+
+        <section class="panel panel-console">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">桌宠控制台</p>
+              <h2>灵宝状态与事件日志</h2>
+            </div>
+            <span class="status-pill" id="pet-status-label">桌宠待机中</span>
+          </div>
+          <div class="console-grid">
+            <div class="console-card">
+              <h3>灵宝当前判断</h3>
+              <div id="current-intent-card"></div>
+            </div>
+            <div class="console-card">
+              <h3>事件日志</h3>
+              <div id="event-log" class="event-log"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="pet-dock" id="pet-dock">
+      <button class="pet-avatar" id="pet-avatar" aria-label="open pet">
+        <img src="./assets/lingbao-placeholder.svg" alt="Lingbao" />
+      </button>
+      <div class="pet-bubble" id="pet-bubble">
+        <p class="pet-label">灵宝</p>
+        <p class="pet-message" id="pet-message"></p>
+        <div class="pet-actions">
+          <button id="pet-start" class="solid-button">现在开始</button>
+          <button id="pet-snooze" class="ghost-button">晚点提醒</button>
+          <button id="pet-dismiss" class="ghost-button">不是这个</button>
+        </div>
+      </div>
+    </aside>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

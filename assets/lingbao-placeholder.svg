@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(64 72) rotate(90) scale(50 46)">
+      <stop stop-color="#FFD76A"/>
+      <stop offset="0.52" stop-color="#FF8A3D"/>
+      <stop offset="1" stop-color="#FF5A2A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="64" y1="12" x2="64" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD86E"/>
+      <stop offset="0.45" stop-color="#FF9C42"/>
+      <stop offset="1" stop-color="#F15A29"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="76" r="46" fill="url(#glow)"/>
+  <path d="M62.5253 12C76.2935 23.8364 84.9384 35.1273 88.46 45.8727C92.9562 59.6 87.909 73.3091 75.2699 88.0909C71.0825 92.9879 67.0652 97.3455 64 101.164C61.5151 97.1273 58.1077 92.6909 53.7789 87.8545C40.9721 73.5273 35.0469 59.7818 39.9737 46.6182C43.7017 36.6545 51.2181 25.1091 62.5253 12Z" fill="url(#body)"/>
+  <path d="M64 32C72.4 40.5455 76.7636 49.4909 77.0909 58.8364C77.4182 68.1818 73.0545 77.0182 64 85.3455C54.9455 77.0182 50.5818 68.1818 50.9091 58.8364C51.2364 49.4909 55.6 40.5455 64 32Z" fill="#FFF2CC" fill-opacity="0.36"/>
+  <ellipse cx="51" cy="61" rx="4.5" ry="7.5" fill="#1F1A14"/>
+  <ellipse cx="77" cy="61" rx="4.5" ry="7.5" fill="#1F1A14"/>
+  <path d="M54 79C57.2 82.2 60.5333 83.8 64 83.8C67.4667 83.8 70.8 82.2 74 79" stroke="#1F1A14" stroke-width="4.5" stroke-linecap="round"/>
+</svg>
