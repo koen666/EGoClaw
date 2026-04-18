@@ -98,6 +98,7 @@ async function bootstrap() {
       },
       onStateChange: (isOpen) => {
         isDouyinForeground = isOpen;
+        engine?.setForegroundState(isOpen);
         syncPetVisibility();
       }
     });

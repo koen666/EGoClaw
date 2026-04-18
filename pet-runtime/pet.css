@@ -31,8 +31,8 @@ html, body {
 
 .pet-stage {
   position: relative;
-  width: 148px;
-  height: 148px;
+  width: 156px;
+  height: 156px;
   display: grid;
   place-items: center;
 }
@@ -52,8 +52,8 @@ html, body {
 .pet-avatar {
   position: relative;
   z-index: 1;
-  width: 128px;
-  height: 128px;
+  width: 136px;
+  height: 136px;
   display: grid;
   place-items: center;
   transform-origin: 50% 75%;
@@ -65,11 +65,25 @@ html, body {
 }
 
 .pet-avatar img {
-  width: 112px;
-  height: 112px;
+  width: 132px;
+  height: 132px;
   display: block;
+  object-fit: contain;
   filter: drop-shadow(0 12px 22px rgba(207, 115, 70, 0.22));
   pointer-events: none;
+}
+
+.pet-shell[data-pose="squat"] .pet-avatar {
+  transform: translateY(6px) scale(0.96);
+}
+
+.pet-shell[data-pose="cling"] .pet-avatar {
+  transform: translateX(4px) scale(1.02);
+}
+
+.pet-shell[data-pose="cling"] .pet-glow {
+  opacity: 0.46;
+  transform: scale(0.9);
 }
 
 .pet-avatar:focus-visible {

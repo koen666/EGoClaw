@@ -57,6 +57,9 @@ function makeInitialState() {
     distilledVideos: [],
     intents: [],
     graph: { nodes: [], edges: [] },
+    system: {
+      douyinForeground: false
+    },
     planner: null,
     pet: {
       visible: false,
@@ -148,6 +151,7 @@ export class DemoEngine extends EventEmitter {
       distilledVideos: this.state.distilledVideos,
       intents: this.state.intents,
       graph: this.state.graph,
+      system: this.state.system,
       planner: this.state.planner,
       pet: this.state.pet,
       nudgeHistory: this.state.nudgeHistory,
@@ -173,6 +177,7 @@ export class DemoEngine extends EventEmitter {
     this.state.distilledVideos = savedState.distilledVideos || [];
     this.state.intents = savedState.intents || [];
     this.state.graph = savedState.graph || { nodes: [], edges: [] };
+    this.state.system = savedState.system || { douyinForeground: false };
     this.state.planner = savedState.planner || null;
     this.state.pet = savedState.pet || this.state.pet;
     this.state.nudgeHistory = savedState.nudgeHistory || [];
@@ -492,6 +497,15 @@ export class DemoEngine extends EventEmitter {
     this.state.settings[key] = !this.state.settings[key];
     this.log("设置", `${key} -> ${this.state.settings[key] ? "on" : "off"}`);
     this.emitUpdate();
+  }
+
+  setForegroundState(isOpen) {
+    if (this.state.system.douyinForeground === Boolean(isOpen)) {
+      return this.snapshot();
+    }
+    this.state.system.douyinForeground = Boolean(isOpen);
+    this.emitUpdate();
+    return this.snapshot();
   }
 
   async setCompanionPreference(key, value) {

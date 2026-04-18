@@ -1,12 +1,19 @@
 const refs = {
   shell: document.getElementById("pet-shell"),
   avatar: document.getElementById("pet-avatar"),
+  avatarImage: document.getElementById("pet-avatar-image"),
   status: document.getElementById("pet-status")
 };
 
 const state = {
   lastTriggerId: null,
-  drag: null
+  drag: null,
+  pose: "squat"
+};
+
+const PET_POSE_ASSETS = {
+  stand: "../assets/直立.png",
+  squat: "../assets/下蹲.png"
 };
 
 function pointFromEvent(event) {
@@ -32,11 +39,17 @@ function triggerAttention() {
 function render(snapshot) {
   const message = snapshot.pet.message || "灵宝已经在等你了。";
   const meta = snapshot.pet.meta || "点击打开当前行动。";
+  const nextPose = state.drag ? "stand" : "squat";
 
   refs.shell.dataset.priority = snapshot.pet.priority || "idle";
+  refs.shell.dataset.pose = nextPose;
   refs.avatar.setAttribute("title", `${message} ${meta}`.trim());
   refs.avatar.setAttribute("aria-label", `${message}。点击打开当前行动。`);
   refs.status.textContent = `${message} ${meta}`.trim();
+  if (state.pose !== nextPose) {
+    refs.avatarImage.src = PET_POSE_ASSETS[nextPose];
+    state.pose = nextPose;
+  }
 
   if (
     snapshot.settings.animationEnabled &&
@@ -76,6 +89,9 @@ refs.avatar.addEventListener("pointerdown", (event) => {
     startY: event.screenY,
     moved: false
   };
+  refs.shell.dataset.pose = "stand";
+  refs.avatarImage.src = PET_POSE_ASSETS.stand;
+  state.pose = "stand";
   window.egoclawPet.startDrag(pointFromEvent(event));
 });
 
