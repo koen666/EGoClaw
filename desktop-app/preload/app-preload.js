@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("egoclawApp", {
   getState: () => ipcRenderer.invoke("demo:get-state"),
+  register: (payload) => ipcRenderer.invoke("auth:register", payload),
+  login: (payload) => ipcRenderer.invoke("auth:login", payload),
+  logout: () => ipcRenderer.invoke("auth:logout"),
   connectDemo: () => ipcRenderer.invoke("demo:connect"),
   rerunPipeline: () => ipcRenderer.invoke("demo:rerun"),
   simulateTrigger: (triggerId) => ipcRenderer.invoke("demo:trigger", triggerId),

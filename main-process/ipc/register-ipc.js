@@ -18,6 +18,9 @@ export function registerIpc({ engine, getAppWindow, getPetController, onState, o
   });
 
   ipcMain.handle("demo:get-state", () => engine.snapshot());
+  ipcMain.handle("auth:register", (_event, payload) => engine.register(payload));
+  ipcMain.handle("auth:login", (_event, payload) => engine.login(payload));
+  ipcMain.handle("auth:logout", () => engine.logout());
   ipcMain.handle("demo:connect", () => engine.connectDemo());
   ipcMain.handle("demo:rerun", () => engine.rerunPipeline());
   ipcMain.handle("demo:trigger", (_event, triggerId) => engine.triggerScenario(triggerId));

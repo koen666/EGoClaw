@@ -1,263 +1,123 @@
 # EGoclaw
 
-## 项目定位
+EGoclaw 现在是一个 Electron 桌面 Demo，分成两部分：
 
-EGoclaw 是一个桌面 App，不是 Web 产品。
+1. `desktop-app/` 主应用窗口
+2. `pet-runtime/` 独立桌宠窗口
 
-产品由两个独立部分组成：
+当前主应用已经接入本地 MySQL 登录注册。应用启动时会自动创建数据库和 `users` 表。
 
-1. 主应用窗口
-2. 系统级桌宠灵宝
-
-主应用窗口负责：
-
-1. 展示收藏同步结果
-2. 展示蒸馏结果
-3. 展示知识图谱
-4. 展示当前意图和下一步动作
-5. 承接用户深度查看和执行
-
-系统级桌宠灵宝负责：
-
-1. 常驻桌面
-2. 检测是否打开抖音
-3. 在触发条件满足时从抖音窗口边缘跳出
-4. 主动提醒用户
-5. 点击后拉起主应用窗口
-
-桌宠不属于主应用页面内部。
-桌宠必须作为独立窗口存在。
-
----
-
-## 当前代码状态
-
-当前根目录的 `index.html` / `main.css` / `app.js` 只是一个临时单文件 Demo。
-
-它的作用只有一个：
-
-1. 快速验证产品流程
-
-它不是最终目录结构，也不是最终实现方式。
-
-后续代码必须拆分成桌面 App、桌宠窗口、Agent 服务、共享数据层四部分。
-
----
-
-## 项目如何跑起来
-
-### 1. 环境要求
-
-需要本地具备：
+## 运行要求
 
 1. Node.js 22+
 2. npm 10+
-3. 桌面图形环境
+3. 本地 MySQL
+4. 本地图形桌面环境
+
+## 环境配置
+
+项目会按这个优先级读取配置：
+
+1. 进程环境变量
+2. 根目录 `.env.local`
+3. 根目录 `.env`
+
+当前仓库已经支持直接使用 `.env`。
+
+如果你本地 MySQL 是 `root` 且没有密码，根目录 `.env` 保持下面这样即可：
+
+```bash
+KIMI_API_KEY=
+KIMI_BASE_URL=https://api.moonshot.ai/v1
+KIMI_MODEL=kimi-k2
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=
+MYSQL_DATABASE=egoclaw_demo
+```
 
 说明：
 
-1. `npm run smoke` 不需要 GUI
-2. `npm start` 需要本地桌面图形环境才能真正拉起 Electron 窗口
+1. `MYSQL_DATABASE` 不需要手动建，应用启动时会自动创建
+2. `users` 表不需要手动建，应用启动时会自动创建
+3. 不要把真实 API Key 提交到仓库
 
-### 2. 安装依赖
-
-在项目根目录执行：
+## 安装依赖
 
 ```bash
 npm install
 ```
 
-### 3. 配置 Kimi
-
-推荐方式一：使用环境变量
-
-```bash
-export KIMI_API_KEY="你的 Kimi Key"
-export KIMI_BASE_URL="https://api.moonshot.ai/v1"
-export KIMI_MODEL="kimi-k2"
-```
-
-推荐方式二：使用 `.env.local`
-
-先复制模板：
-
-```bash
-cp .env.example .env.local
-```
-
-然后把 `.env.local` 改成：
-
-```bash
-KIMI_API_KEY=你的_Kimi_Key
-KIMI_BASE_URL=https://api.moonshot.ai/v1
-KIMI_MODEL=kimi-k2
-```
-
-注意：
-
-1. 不要把真实 key 提交到仓库
-2. 当前 Agent 层支持没有 key 时的 fallback 逻辑
-3. 没有 key 也能跑 Demo，但多智能体输出会退回本地规则结果
-
-### 4. 先跑无界面检查
-
-先执行：
+## 启动前检查
 
 ```bash
 npm run check
 ```
 
-作用：
+这会检查主应用、桌宠、主进程和 smoke 脚本的 JS 语法。
 
-1. 检查主应用、桌宠、主进程和脚本入口的语法是否正确
-
-### 5. 跑无 GUI 的 Demo smoke test
-
-执行：
+## Smoke 验证
 
 ```bash
 npm run smoke
 ```
 
-预期结果：
+这条命令会用本地 mock 登录态绕过 MySQL UI，直接验证主链路是否能产出：
 
-1. 输出 `connected: true`
-2. 输出 `current_intent`
-3. 输出 `current_action`
-4. 输出 `pet_message`
+1. 收藏夹同步
+2. 意图识别
+3. 行动规划
+4. 灵宝提醒
 
-这说明：
-
-1. 收藏样本已进入系统
-2. Agent 管线已跑通
-3. 当前意图、当前动作和桌宠提醒已经生成
-
-### 6. 启动桌面 App
-
-执行：
+## 启动桌面 App
 
 ```bash
 npm start
 ```
 
-启动后会发生：
+启动后流程如下：
 
 1. 打开主应用窗口
-2. 打开桌宠独立窗口
-3. 主进程开始轮询前台应用
-4. 如果检测到抖音前台，会触发桌宠提醒逻辑
+2. 打开独立桌宠窗口
+3. 主进程尝试初始化 MySQL
+4. 如果 MySQL 成功，首页先显示登录 / 注册
+5. 注册或登录后，进入收藏夹 Demo 接入页
+6. 点击 `连接 Demo 收藏夹` 后进入完整多 Agent 链路
 
-### 7. 当前 Demo 怎么操作
+## 当前主应用流程
 
-进入主应用后，建议按下面顺序验证：
+1. 登录 / 注册
+2. 连接 Demo 收藏夹
+3. 同步中心查看样本和 Agent 状态
+4. 成长地图查看图谱
+5. 内容蒸馏查看 skill 化结果
+6. 当前行动查看一步步拆解
+7. 对话页查看系统解释
 
-1. 点击 `连接 Demo 收藏夹`
-2. 等待收藏样本进入系统
-3. 在首页查看当前主意图和当前动作
-4. 在 `同步中心` 查看 Agent 处理链路
-5. 在 `成长地图` 查看知识图谱
-6. 在 `内容蒸馏` 查看视频如何被转成 skill
-7. 点击顶部的：
-   - `模拟打开抖音`
-   - `模拟今晚空闲`
-   - `模拟中断重启`
-8. 观察桌宠窗口文案变化
-9. 点击桌宠的：
-   - `现在开始`
-   - `查看路径`
-   - `晚点提醒`
-   - `不是这个`
+## MySQL 失败时
 
-### 8. 如果 `npm start` 起不来
+如果打开应用后登录页提示 MySQL 初始化失败，优先检查：
 
-常见原因：
+1. `mysql -u root` 是否能直接连上
+2. `.env` 里的 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` 是否正确
+3. 当前 MySQL 是否允许该用户创建数据库
 
-1. 当前环境没有 GUI
-2. 当前环境不允许 Electron 打开图形窗口
-3. macOS 权限或沙箱限制导致 Electron 进程退出
-
-遇到这种情况时：
-
-1. 先跑 `npm run check`
-2. 再跑 `npm run smoke`
-
-只要这两个成功，说明：
-
-1. 代码结构和 Agent 主链路是通的
-2. 剩下的问题通常是本地 GUI 环境，不是业务逻辑本身
-
----
-
-## 目标目录结构
-
-建议后续重构为下面这套结构：
+## 目录
 
 ```text
 EGoClaw/
-├── README.md
-├── idea.md
+├── desktop-app/        # 主应用窗口
+├── pet-runtime/        # 独立桌宠窗口
+├── main-process/       # Electron 主进程、IPC、系统检测、MySQL 服务
+├── agents/             # 多 Agent 逻辑
+├── shared/             # mock 数据、状态、环境读取
+├── assets/             # 静态资源
 ├── app.md
+├── idea.md
 ├── TECHNICAL_PLAN.md
-├── assets/
-│   └── lingbao-placeholder.svg
-├── desktop-app/
-│   ├── index.html
-│   ├── main.css
-│   ├── renderer/
-│   │   ├── app.js
-│   │   ├── pages/
-│   │   │   ├── home.js
-│   │   │   ├── sync.js
-│   │   │   ├── map.js
-│   │   │   ├── distill.js
-│   │   │   ├── action.js
-│   │   │   ├── dialogue.js
-│   │   │   └── settings.js
-│   │   ├── components/
-│   │   └── store/
-│   └── preload/
-├── pet-runtime/
-│   ├── pet.html
-│   ├── pet.css
-│   ├── pet.js
-│   └── animations/
-├── main-process/
-│   ├── main.js
-│   ├── windows/
-│   │   ├── app-window.js
-│   │   └── pet-window.js
-│   ├── system/
-│   │   ├── foreground-detector.js
-│   │   ├── douyin-detector.js
-│   │   └── tray.js
-│   └── ipc/
-├── agents/
-│   ├── client/
-│   │   └── kimi.js
-│   ├── ingestion-agent.js
-│   ├── distill-agent.js
-│   ├── intent-agent.js
-│   ├── graph-agent.js
-│   ├── planner-agent.js
-│   ├── nudge-agent.js
-│   └── memory-agent.js
-├── shared/
-│   ├── mock/
-│   ├── schemas/
-│   ├── graph/
-│   ├── store/
-│   └── utils/
-└── web/
+└── README.md
 ```
-
-说明：
-
-1. `desktop-app/` 是主应用窗口
-2. `pet-runtime/` 是桌宠独立窗口
-3. `main-process/` 是桌面应用主进程和系统能力
-4. `agents/` 是多智能体逻辑
-5. `shared/` 是共享 schema、mock 数据、图谱和本地状态
-6. `web/` 是旧代码，不作为当前主实现
 
 ---
 

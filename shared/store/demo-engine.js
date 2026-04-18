@@ -70,9 +70,15 @@ function makeInitialState() {
 }
 
 export class DemoEngine extends EventEmitter {
-  constructor() {
+  constructor({ authService = null, authReady = false, authError = null } = {}) {
     super();
     this.state = makeInitialState();
+    this.authService = authService;
+    this.state.auth = {
+      ready: authReady,
+      error: authError,
+      user: null
+    };
   }
 
   snapshot() {
@@ -94,6 +100,11 @@ export class DemoEngine extends EventEmitter {
   }
 
   async connectDemo() {
+    if (!this.state.auth?.user) {
+      this.log("认证", "用户未登录，不能进入 Demo 主链路。");
+      this.emitUpdate();
+      return this.snapshot();
+    }
     if (this.state.processing) return this.snapshot();
     this.state.processing = true;
     this.state.setupSteps = makeSetupSteps();
@@ -157,6 +168,81 @@ export class DemoEngine extends EventEmitter {
     this.state.connected = true;
     this.state.processing = false;
     this.log("初始化完成", "收藏蒸馏、图谱、动作和灵宝提醒已全部就绪。");
+    this.emitUpdate();
+    return this.snapshot();
+  }
+
+  async register(payload) {
+    if (!this.authService) {
+      this.state.auth.error = "MySQL 未初始化";
+      this.emitUpdate();
+      return this.snapshot();
+    }
+    try {
+      const user = await this.authService.register(payload);
+      this.state.auth.user = user;
+      this.state.auth.error = null;
+      this.log("认证", `注册成功并已登录：${user.username}`);
+    } catch (error) {
+      this.state.auth.error = error.message;
+      this.log("认证失败", error.message);
+    }
+    this.emitUpdate();
+    return this.snapshot();
+  }
+
+  async login(payload) {
+    if (!this.authService) {
+      this.state.auth.error = "MySQL 未初始化";
+      this.emitUpdate();
+      return this.snapshot();
+    }
+    try {
+      const user = await this.authService.login(payload);
+      this.state.auth.user = user;
+      this.state.auth.error = null;
+      this.log("认证", `登录成功：${user.username}`);
+    } catch (error) {
+      this.state.auth.error = error.message;
+      this.log("认证失败", error.message);
+    }
+    this.emitUpdate();
+    return this.snapshot();
+  }
+
+  logout() {
+    this.state.auth.user = null;
+    this.state.auth.error = null;
+    this.state.connected = false;
+    this.state.processing = false;
+    this.state.currentPage = "home";
+    this.state.archive = [];
+    this.state.distilledVideos = [];
+    this.state.intents = [];
+    this.state.graph = { nodes: [], edges: [] };
+    this.state.planner = null;
+    this.state.activeVideoId = null;
+    this.state.activeIntentId = null;
+    this.state.nudgeHistory = [];
+    this.state.skillMemory = [];
+    this.state.soulMemory = [];
+    this.state.chatMessages = [
+      {
+        role: "assistant",
+        text: "我会先读懂你收藏过什么，再决定怎么接住你。"
+      }
+    ];
+    this.state.setupSteps = makeSetupSteps();
+    this.state.agentState = makeAgentState();
+    this.state.pet = {
+      visible: false,
+      collapsed: false,
+      message: "主人，我先替你守着。只在有必要的时候出现。",
+      meta: "等待路径升温或抖音前台触发。",
+      priority: "idle",
+      lastTriggerId: null
+    };
+    this.log("认证", "用户已退出登录。");
     this.emitUpdate();
     return this.snapshot();
   }

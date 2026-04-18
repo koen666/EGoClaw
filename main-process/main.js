@@ -4,6 +4,8 @@ import { createAppWindow } from "./windows/app-window.js";
 import { createPetWindow } from "./windows/pet-window.js";
 import { registerIpc } from "./ipc/register-ipc.js";
 import { createDouyinDetector } from "./system/douyin-detector.js";
+import { initMySQL } from "./services/mysql-service.js";
+import { AuthService } from "./services/auth-service.js";
 
 let engine = null;
 let appWindow = null;
@@ -60,7 +62,19 @@ async function focusCurrentActionFromPet() {
 
 async function bootstrap() {
   if (!engine) {
-    engine = new DemoEngine();
+    let authService = null;
+    let authReady = false;
+    let authError = null;
+
+    try {
+      const pool = await initMySQL();
+      authService = new AuthService({ pool });
+      authReady = true;
+    } catch (error) {
+      authError = error.message;
+    }
+
+    engine = new DemoEngine({ authService, authReady, authError });
   }
   ensureAppWindow();
   ensurePetController();

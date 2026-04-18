@@ -1,7 +1,12 @@
 import { DemoEngine } from "../shared/store/demo-engine.js";
 
 async function main() {
-  const engine = new DemoEngine();
+  const engine = new DemoEngine({ authReady: true });
+  engine.state.auth.user = {
+    id: 0,
+    username: "demo",
+    email: "demo@local"
+  };
   await engine.connectDemo();
   const snapshot = engine.snapshot();
 

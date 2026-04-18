@@ -11,6 +11,7 @@
     "check": "node --check desktop-app/renderer/app.js && node --check pet-runtime/pet.js && node --check pet-runtime/pet-preload.js && node --check main-process/main.js && node --check main-process/ipc/register-ipc.js && node --check main-process/system/douyin-detector.js && node --check main-process/windows/pet-window.js && node --check main-process/windows/pet-position-store.js && node --check scripts/demo-smoke.js"
   },
   "dependencies": {
-    "electron": "^35.0.0"
+    "electron": "^35.0.0",
+    "mysql2": "^3.14.3"
   }
 }
