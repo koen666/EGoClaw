@@ -75,7 +75,11 @@ function makeInitialState() {
       autoNudge: true,
       petPersistent: true,
       startupLaunch: true,
-      animationEnabled: true
+      animationEnabled: true,
+      personalityTone: "direct",
+      reminderStyle: "contextual",
+      planningStyle: "tiny_step",
+      companionMode: "partner"
     },
     logs: [{ title: "系统", body: "等待连接收藏夹样本。", time: nowTimeLabel() }]
   };
@@ -488,6 +492,20 @@ export class DemoEngine extends EventEmitter {
     this.state.settings[key] = !this.state.settings[key];
     this.log("设置", `${key} -> ${this.state.settings[key] ? "on" : "off"}`);
     this.emitUpdate();
+  }
+
+  async setCompanionPreference(key, value) {
+    const allowed = {
+      personalityTone: ["direct", "gentle", "coach", "buddy"],
+      reminderStyle: ["contextual", "daily", "proactive"],
+      planningStyle: ["tiny_step", "full_path", "why_first"],
+      companionMode: ["calm", "warm", "sharp", "partner"]
+    };
+    if (!allowed[key]?.includes(value)) return this.snapshot();
+    this.state.settings[key] = value;
+    this.log("灵宝设定", `${key} -> ${value}`);
+    this.emitUpdate();
+    return this.snapshot();
   }
 
   async toggleChecklistStep(index) {

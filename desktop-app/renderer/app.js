@@ -37,15 +37,12 @@ const refs = {
   statusBadge: document.getElementById("status-badge"),
   userBadge: document.getElementById("user-badge"),
   logoutButton: document.getElementById("logout-button"),
-  homeIntentTitle: document.getElementById("home-intent-title"),
   homeIntentSummary: document.getElementById("home-intent-summary"),
-  homeAction: document.getElementById("home-action"),
-  homeIntentList: document.getElementById("home-intent-list"),
-  homeNudgeHistory: document.getElementById("home-nudge-history"),
-  homeStatFocus: document.getElementById("home-stat-focus"),
-  homeStatNodes: document.getElementById("home-stat-nodes"),
-  homeStatTrigger: document.getElementById("home-stat-trigger"),
-  homeStatSync: document.getElementById("home-stat-sync"),
+  homeKeywords: document.getElementById("home-keywords"),
+  homeVisionTitle: document.getElementById("home-vision-title"),
+  homeVision: document.getElementById("home-vision"),
+  homeUnderstanding: document.getElementById("home-understanding"),
+  homePreferences: document.getElementById("home-preferences"),
   graph: document.getElementById("graph"),
   mapFocus: document.getElementById("map-focus"),
   mapMemory: document.getElementById("map-memory"),
@@ -121,10 +118,6 @@ function bindEvents() {
     if (!text) return;
     refs.chatInput.value = "";
     await window.egoclawApp.sendChat(text);
-  });
-
-  document.querySelectorAll(".quick-question").forEach((button) => {
-    button.addEventListener("click", () => window.egoclawApp.sendChat(button.dataset.question));
   });
 
   refs.graph.addEventListener("pointerdown", (event) => {
@@ -227,34 +220,19 @@ function renderNav() {
 }
 
 function renderHome() {
-  const intent = currentIntent();
-  const planner = state.snapshot.planner;
-  const latestNudge = state.snapshot.nudgeHistory[0];
-
-  refs.homeIntentTitle.textContent = intent ? `${intent.name}.` : "Waiting.";
-  refs.homeIntentSummary.textContent = intent
-    ? `我已经把你最近收藏里的这条路径提取出来了。${intent.reasons[0] || ""}`
-    : "先同步收藏夹，然后我会把当前最强意图整理出来。";
-
-  refs.homeAction.innerHTML = planner
-    ? detailCard(planner.action, [
-        ["Why now", planner.whyNow],
-        ["Duration", `${planner.estimatedMinutes} 分钟`]
-      ])
-    : detailCard("尚未生成", [["Next", "同步收藏夹后生成当前动作"]]);
-
-  refs.homeIntentList.innerHTML = state.snapshot.intents.length
-    ? state.snapshot.intents.slice(0, 3).map((item) => stackItem(item.name, item.reasons[0] || "", `${item.score}`)).join("")
-    : stackItem("暂无路径", "等待同步。", "");
-
-  refs.homeNudgeHistory.innerHTML = latestNudge
-    ? stackItem(latestNudge.title, latestNudge.body, latestNudge.time)
-    : stackItem("暂无提醒", "等待上下文触发。", "");
-
-  refs.homeStatFocus.textContent = intent?.name || "Not Ready";
-  refs.homeStatNodes.textContent = `${state.snapshot.graph.nodes?.length || 0} Nodes`;
-  refs.homeStatTrigger.textContent = triggerLabel(state.snapshot.pet.lastTriggerId);
-  refs.homeStatSync.textContent = state.snapshot.connected ? "Stable" : "Pending";
+  const profile = deriveHomeProfile(state.snapshot);
+  refs.homeIntentSummary.textContent = profile.summary;
+  refs.homeVisionTitle.textContent = profile.visionTitle;
+  refs.homeKeywords.innerHTML = profile.keywords.map((item) => `<span class="pill accent">${item}</span>`).join("");
+  refs.homeVision.innerHTML = detailCard(profile.visionTitle, [
+    ["画像总结", profile.visionBody],
+    ["当前同步", profile.syncLine]
+  ]);
+  refs.homeUnderstanding.innerHTML = profile.understanding.map((item) => stackItem(item.title, item.body, "")).join("");
+  refs.homePreferences.innerHTML = renderPreferenceGroups(state.snapshot.settings || {});
+  refs.homePreferences.querySelectorAll("[data-pref-key][data-pref-value]").forEach((button) => {
+    button.addEventListener("click", () => window.egoclawApp.setCompanionPreference(button.dataset.prefKey, button.dataset.prefValue));
+  });
 }
 
 function renderMap() {
@@ -473,6 +451,109 @@ function skillCard(video, active) {
       <span>${video.action}</span>
     </div>
   </button>`;
+}
+
+function deriveHomeProfile(snapshot) {
+  const intents = snapshot.intents || [];
+  const topIntents = intents.slice(0, 3);
+  const keywords = topIntents.length ? topIntents.map((item) => simplifyIntentLabel(item.name)) : ["表达力", "行动力", "长期主义"];
+  const visionTitle = keywords.length >= 3 ? `更会${keywords[0]}、更能${keywords[1]}、更稳地靠近${keywords[2]}` : "更像三年后的自己";
+  const summary = snapshot.connected
+    ? "灵宝会根据你的收藏、路径变化和完成记录，持续更新对你的理解。你也可以反过来定义它的性格、提醒方式和陪伴风格。"
+    : "先完成一次同步，灵宝会从你的收藏中提炼出长期画像和陪伴偏好。";
+  const visionBody = topIntents.length
+    ? `从最近的收藏和反复出现的路径来看，你真正反复靠近的不是单个技巧，而是 ${keywords.join("、")} 这些会长期塑造你的能力。`
+    : "目前还没有足够的收藏样本来形成稳定的三年画像。";
+  const syncLine = snapshot.connected
+    ? `已同步 ${snapshot.archive?.length || 0} 条收藏样本，当前图谱包含 ${snapshot.graph?.nodes?.length || 0} 个节点。`
+    : "当前还没有同步记录。";
+  const latestNudge = snapshot.nudgeHistory?.[0];
+  const understanding = [
+    {
+      title: "当前高频主题",
+      body: topIntents.length ? topIntents.map((item) => `${item.name}（${item.score}）`).join(" / ") : "等待同步后识别。"
+    },
+    {
+      title: "当前主路径",
+      body: topIntents[0]?.reasons?.[0] || "等待同步后生成。"
+    },
+    {
+      title: "最近动作建议",
+      body: snapshot.planner?.action || "等待同步后生成。"
+    },
+    {
+      title: "最近一次提醒",
+      body: latestNudge ? `${latestNudge.title} / ${latestNudge.time}` : "暂时没有提醒记录。"
+    }
+  ];
+  return { summary, keywords, visionTitle, visionBody, syncLine, understanding };
+}
+
+function simplifyIntentLabel(label) {
+  return String(label || "")
+    .replace(/^开始/, "")
+    .replace(/^准备/, "")
+    .replace(/练习/g, "")
+    .replace(/\s+/g, "")
+    .slice(0, 6) || "热爱";
+}
+
+function renderPreferenceGroups(settings) {
+  const groups = [
+    {
+      key: "personalityTone",
+      title: "说话风格",
+      options: [
+        ["direct", "直接克制"],
+        ["gentle", "温柔陪伴"],
+        ["coach", "像教练推进"],
+        ["buddy", "像搭子聊天"]
+      ]
+    },
+    {
+      key: "reminderStyle",
+      title: "提醒方式",
+      options: [
+        ["contextual", "关键时刻出现"],
+        ["daily", "每天轻提醒"],
+        ["proactive", "遇场景主动提醒"]
+      ]
+    },
+    {
+      key: "planningStyle",
+      title: "行动拆解",
+      options: [
+        ["tiny_step", "先给最小一步"],
+        ["full_path", "先给完整路径"],
+        ["why_first", "先解释为什么"]
+      ]
+    },
+    {
+      key: "companionMode",
+      title: "人格偏向",
+      options: [
+        ["calm", "冷静理性"],
+        ["warm", "热情鼓励"],
+        ["sharp", "锋利一点"],
+        ["partner", "长期伙伴"]
+      ]
+    }
+  ];
+
+  return groups
+    .map(
+      (group) => `<div class="preference-group">
+        <div class="preference-title">${group.title}</div>
+        <div class="preference-options">
+          ${group.options
+            .map(
+              ([value, label]) => `<button class="preference-option ${settings[group.key] === value ? "active" : ""}" data-pref-key="${group.key}" data-pref-value="${value}" type="button">${label}</button>`
+            )
+            .join("")}
+        </div>
+      </div>`
+    )
+    .join("");
 }
 
 function escapeHtml(text) {

@@ -51,73 +51,40 @@
 
       <main class="app-main">
         <section class="page is-active" data-page="home">
-          <div class="hero-grid">
-            <div class="hero-copy">
-              <span class="meta-label">Lingbao / Volume 01</span>
-              <h1 id="home-intent-title" class="hero-title"></h1>
-              <p id="home-intent-summary" class="hero-summary"></p>
-              <div class="hero-actions">
-                <button id="go-action" class="editorial-button" type="button">开始</button>
-                <button id="go-dialogue" class="editorial-button secondary" type="button">查看解释</button>
-              </div>
-            </div>
-
-            <div class="hero-stage">
-              <div class="hero-stage-frame">
-                <div class="lingbao-mark">
-                  <div class="lingbao-core"></div>
-                  <div class="lingbao-eyes">
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-                <div class="stage-code">ARCHIVE_SIGNAL_01</div>
-              </div>
+          <div class="home-hero">
+            <span class="meta-label">Lingbao / Identity</span>
+            <h1 class="hero-title">把刷到的热爱，养成三年后的自己</h1>
+            <p id="home-intent-summary" class="hero-summary"></p>
+            <div id="home-keywords" class="pill-row home-pill-row"></div>
+            <div class="hero-actions">
+              <button id="go-action" class="editorial-button" type="button">编辑三年画像</button>
+              <button id="go-dialogue" class="editorial-button secondary" type="button">和灵宝校准</button>
             </div>
           </div>
 
-          <div class="stats-grid">
-            <div class="stat-block">
-              <span class="stat-label">Current Focus</span>
-              <strong id="home-stat-focus" class="stat-value"></strong>
-            </div>
-            <div class="stat-block">
-              <span class="stat-label">Active Nodes</span>
-              <strong id="home-stat-nodes" class="stat-value"></strong>
-            </div>
-            <div class="stat-block">
-              <span class="stat-label">Latest Trigger</span>
-              <strong id="home-stat-trigger" class="stat-value"></strong>
-            </div>
-            <div class="stat-block">
-              <span class="stat-label">Sync Status</span>
-              <strong id="home-stat-sync" class="stat-value"></strong>
-            </div>
-          </div>
-
-          <div class="content-grid">
-            <section class="editorial-card">
+          <div class="home-layout">
+            <section class="editorial-card home-card home-card-wide">
               <div class="section-head">
-                <span class="meta-label">Action</span>
-                <h3>现在最值得开始的一步</h3>
+                <span class="meta-label">Three-Year Self</span>
+                <h3 id="home-vision-title">三年后的自己</h3>
               </div>
-              <div id="home-action"></div>
+              <div id="home-vision"></div>
             </section>
 
-            <section class="editorial-card">
+            <section class="editorial-card home-card">
               <div class="section-head">
-                <span class="meta-label">Paths</span>
-                <h3>Top 3</h3>
+                <span class="meta-label">Lingbao Read</span>
+                <h3>灵宝如何理解你</h3>
               </div>
-              <div id="home-intent-list" class="stack-list"></div>
+              <div id="home-understanding" class="stack-list"></div>
             </section>
 
-            <section class="editorial-card">
+            <section class="editorial-card home-card">
               <div class="section-head">
-                <span class="meta-label">Reminder</span>
-                <h3>最近提醒</h3>
+                <span class="meta-label">Custom Tone</span>
+                <h3>定制灵宝性格</h3>
               </div>
-              <div id="home-nudge-history" class="stack-list"></div>
+              <div id="home-preferences" class="preference-stack"></div>
             </section>
           </div>
         </section>
@@ -185,11 +152,6 @@
                 <div class="chat-code">GPT-5.4</div>
               </div>
               <div id="chat-messages" class="chat-messages"></div>
-              <div class="quick-row chat-quick-row">
-                <button class="quick-question" data-question="为什么提醒我这个？" type="button">为什么提醒我这个？</button>
-                <button class="quick-question" data-question="把我的收藏整理一下" type="button">把我的收藏整理一下</button>
-                <button class="quick-question" data-question="我今天最该开始什么？" type="button">我今天最该开始什么？</button>
-              </div>
               <div class="chat-composer">
                 <form id="chat-form" class="chat-form">
                   <input id="chat-input" type="text" placeholder="给 EGoclaw 发送消息" />

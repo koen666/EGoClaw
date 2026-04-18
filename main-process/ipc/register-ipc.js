@@ -31,6 +31,7 @@ export function registerIpc({ engine, getAppWindow, getPetController, onState, o
   ipcMain.handle("demo:new-chat", () => engine.newConversation());
   ipcMain.handle("demo:select-chat", (_event, conversationId) => engine.selectConversation(conversationId));
   ipcMain.handle("demo:toggle-setting", (_event, key) => engine.toggleSetting(key));
+  ipcMain.handle("demo:set-companion-preference", (_event, key, value) => engine.setCompanionPreference(key, value));
   ipcMain.handle("demo:pet-action", (_event, action) => engine.handlePetAction(action));
   ipcMain.handle("pet:focus-action", async () => {
     await onPetFocusAction?.();

@@ -321,6 +321,67 @@ button {
   flex-wrap: wrap;
 }
 
+.home-hero {
+  padding: 52px 0 32px;
+  max-width: 760px;
+}
+
+.home-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.home-card {
+  min-height: 100%;
+}
+
+.home-card-wide {
+  grid-column: span 2;
+}
+
+.home-pill-row {
+  margin: 18px 0 28px;
+}
+
+.preference-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.preference-group {
+  display: grid;
+  gap: 10px;
+}
+
+.preference-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(26, 26, 26, 0.72);
+}
+
+.preference-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.preference-option {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(26, 26, 26, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: rgba(26, 26, 26, 0.72);
+  cursor: pointer;
+}
+
+.preference-option.active {
+  border-color: rgba(45, 75, 240, 0.22);
+  background: rgba(45, 75, 240, 0.06);
+  color: var(--accent);
+}
+
 .hero-stage-frame {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -710,8 +771,8 @@ button {
 
 .chat-panel {
   min-width: 0;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -753,7 +814,8 @@ button {
 .chat-messages {
   display: grid;
   gap: 28px;
-  min-height: 0;
+  min-height: 220px;
+  flex: 1;
   overflow: auto;
   padding: 24px 28px 28px;
 }
@@ -1026,11 +1088,16 @@ button {
   }
 
   .hero-grid,
+  .home-layout,
   .content-grid,
   .content-grid.dual,
   .distill-grid,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-card-wide {
+    grid-column: span 1;
   }
 
   .app-header {

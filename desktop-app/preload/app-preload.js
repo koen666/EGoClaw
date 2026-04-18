@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("egoclawApp", {
   newChat: () => ipcRenderer.invoke("demo:new-chat"),
   selectChat: (conversationId) => ipcRenderer.invoke("demo:select-chat", conversationId),
   toggleSetting: (key) => ipcRenderer.invoke("demo:toggle-setting", key),
+  setCompanionPreference: (key, value) => ipcRenderer.invoke("demo:set-companion-preference", key, value),
   petAction: (action) => ipcRenderer.invoke("demo:pet-action", action),
   onState: (callback) => {
     ipcRenderer.removeAllListeners("state:update");
