@@ -1,11 +1,12 @@
 import { ipcMain } from "electron";
 
-export function registerIpc({ engine, appWindow, petController }) {
+export function registerIpc({ engine, getAppWindow, getPetController, onState, onPetFocusAction }) {
   function broadcast(state) {
+    const appWindow = getAppWindow?.();
     if (appWindow && !appWindow.isDestroyed()) {
       appWindow.webContents.send("state:update", state);
     }
-    const petWindow = petController?.window;
+    const petWindow = getPetController?.()?.window;
     if (petWindow && !petWindow.isDestroyed()) {
       petWindow.webContents.send("state:update", state);
     }
@@ -13,11 +14,7 @@ export function registerIpc({ engine, appWindow, petController }) {
 
   engine.on("state", (state) => {
     broadcast(state);
-    if (state.pet.lastTriggerId && state.settings.animationEnabled) {
-      petController?.animateFromOrigin({ x: 36, y: 280 });
-    } else {
-      petController?.dock();
-    }
+    onState?.(state);
   });
 
   ipcMain.handle("demo:get-state", () => engine.snapshot());
@@ -30,4 +27,21 @@ export function registerIpc({ engine, appWindow, petController }) {
   ipcMain.handle("demo:chat", (_event, question) => engine.sendChat(question));
   ipcMain.handle("demo:toggle-setting", (_event, key) => engine.toggleSetting(key));
   ipcMain.handle("demo:pet-action", (_event, action) => engine.handlePetAction(action));
+  ipcMain.handle("pet:focus-action", async () => {
+    await onPetFocusAction?.();
+    return engine.snapshot();
+  });
+  ipcMain.handle("pet:reposition", () => {
+    getPetController?.()?.reposition();
+    return true;
+  });
+  ipcMain.on("pet:drag-start", (_event, pointer) => {
+    getPetController?.()?.startDrag(pointer);
+  });
+  ipcMain.on("pet:drag-move", (_event, pointer) => {
+    getPetController?.()?.drag(pointer);
+  });
+  ipcMain.on("pet:drag-end", (_event, pointer) => {
+    getPetController?.()?.endDrag(pointer);
+  });
 }

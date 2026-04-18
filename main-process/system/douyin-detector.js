@@ -2,7 +2,7 @@ import { detectForegroundApplication } from "./foreground-detector.js";
 
 const MATCHERS = ["抖音", "douyin", "tiktok"];
 
-export function createDouyinDetector({ onOpen }) {
+export function createDouyinDetector({ onOpen, onStateChange }) {
   let wasOpen = false;
   let timer = null;
 
@@ -13,12 +13,16 @@ export function createDouyinDetector({ onOpen }) {
     if (isOpen && !wasOpen) {
       onOpen?.();
     }
+    if (isOpen !== wasOpen) {
+      onStateChange?.(isOpen, result);
+    }
     wasOpen = isOpen;
   }
 
   return {
     start(intervalMs = 3000) {
       if (timer) return;
+      void tick();
       timer = setInterval(tick, intervalMs);
     },
     stop() {

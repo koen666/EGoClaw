@@ -7,21 +7,20 @@
     <link rel="stylesheet" href="./pet.css" />
   </head>
   <body>
-    <div class="pet-shell">
-      <div class="pet-avatar">
-        <img src="../assets/lingbao-placeholder.svg" alt="灵宝" />
-      </div>
-      <div class="pet-bubble">
-        <p class="eyebrow">灵宝</p>
-        <p id="pet-message" class="pet-message"></p>
-        <p id="pet-meta" class="pet-meta"></p>
-        <div class="pet-actions">
-          <button id="pet-start" class="primary-button">现在开始</button>
-          <button id="pet-map" class="secondary-button">查看路径</button>
-          <button id="pet-snooze" class="secondary-button">晚点提醒</button>
-          <button id="pet-dismiss" class="secondary-button">不是这个</button>
+    <div id="pet-shell" class="pet-shell" data-priority="idle">
+      <div class="pet-stage">
+        <div class="pet-glow" aria-hidden="true"></div>
+        <div
+          id="pet-avatar"
+          class="pet-avatar"
+          role="button"
+          tabindex="0"
+          aria-label="灵宝，点击打开当前行动"
+        >
+          <img src="../assets/lingbao-placeholder.svg" alt="" />
         </div>
       </div>
+      <p id="pet-status" class="sr-only" aria-live="polite"></p>
     </div>
     <script type="module" src="./pet.js"></script>
   </body>
