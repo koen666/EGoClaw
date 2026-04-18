@@ -8,6 +8,7 @@ const NAV_ITEMS = [
 const state = {
   snapshot: null,
   authMode: "login",
+  chatHistoryCollapsed: false,
   graphViewport: {
     x: 0,
     y: 0,
@@ -50,10 +51,13 @@ const refs = {
   mapMemory: document.getElementById("map-memory"),
   distillList: document.getElementById("distill-list"),
   distillDetail: document.getElementById("distill-detail"),
+  chatHistory: document.getElementById("chat-history"),
+  toggleChatHistory: document.getElementById("toggle-chat-history"),
+  newChat: document.getElementById("new-chat"),
+  chatHistoryList: document.getElementById("chat-history-list"),
   chatMessages: document.getElementById("chat-messages"),
   chatForm: document.getElementById("chat-form"),
   chatInput: document.getElementById("chat-input"),
-  dialogueDetail: document.getElementById("dialogue-detail"),
   goAction: document.getElementById("go-action"),
   goDialogue: document.getElementById("go-dialogue")
 };
@@ -96,6 +100,12 @@ function bindEvents() {
 
   refs.connectDemo.addEventListener("click", () => window.egoclawApp.connectDemo());
   refs.logoutButton.addEventListener("click", () => window.egoclawApp.logout());
+  const toggleHistory = () => {
+    state.chatHistoryCollapsed = !state.chatHistoryCollapsed;
+    renderDialogue();
+  };
+  refs.toggleChatHistory?.addEventListener("click", toggleHistory);
+  refs.newChat?.addEventListener("click", () => window.egoclawApp.newChat());
   refs.goAction.addEventListener("click", async () => {
     await window.egoclawApp.petAction("start");
     await window.egoclawApp.setPage("dialogue");
@@ -204,12 +214,12 @@ function renderHeader() {
 
 function renderNav() {
   const visiblePage = normalizedPage();
-  refs.navList.innerHTML = `<div class="bottom-nav-inner">${NAV_ITEMS.map(([id, icon, label]) => `
-    <button class="nav-item ${visiblePage === id ? "active" : ""}" data-page="${id}" type="button">
-      <span class="nav-icon">${icon}</span>
+  refs.navList.innerHTML = `${NAV_ITEMS.map(([id, icon, label]) => `
+    <button class="top-nav-item ${visiblePage === id ? "active" : ""}" data-page="${id}" type="button">
+      <span class="top-nav-icon">${icon}</span>
       <span class="nav-label">${label}</span>
     </button>
-  `).join("")}</div>`;
+  `).join("")}`;
 
   refs.navList.querySelectorAll("[data-page]").forEach((button) => {
     button.addEventListener("click", () => window.egoclawApp.setPage(button.dataset.page));
@@ -285,18 +295,36 @@ function renderDistill() {
 }
 
 function renderDialogue() {
-  refs.chatMessages.innerHTML = state.snapshot.chatMessages
-    .map((message) => `<div class="bubble ${message.role}">${message.text}</div>`)
-    .join("");
+  const conversations = state.snapshot.chatConversations || [];
+  const currentConversationId = state.snapshot.currentConversationId;
+  const currentConversation = conversations.find((item) => item.id === currentConversationId) || conversations[0];
+  refs.chatHistory?.classList.toggle("is-collapsed", state.chatHistoryCollapsed);
+  refs.toggleChatHistory?.setAttribute("aria-label", state.chatHistoryCollapsed ? "展开历史记录" : "收起历史记录");
+  const chevron = state.chatHistoryCollapsed ? "&gt;" : "&lt;";
+  refs.toggleChatHistory.innerHTML = `<span class="chevron-mark">${chevron}</span>`;
 
-  const intent = currentIntent();
-  refs.dialogueDetail.innerHTML = intent
-    ? detailCard("Reasoning", [
-        ["Intent", intent.name],
-        ["Evidence", intent.reasons.join(" / ")],
-        ["Current Action", state.snapshot.planner?.action || "未生成"]
-      ])
-    : detailCard("Reasoning", [["Status", "等待同步"]]);
+  refs.chatHistoryList.innerHTML = conversations
+    .map((item) => `<button class="chat-history-item ${item.id === currentConversation?.id ? "active" : ""}" data-chat-id="${item.id}" type="button">
+      <strong>${item.title || "New Chat"}</strong>
+      <span>${item.updatedAt || ""}</span>
+    </button>`)
+    .join("");
+  refs.chatHistoryList.querySelectorAll("[data-chat-id]").forEach((button) => {
+    button.addEventListener("click", () => window.egoclawApp.selectChat(button.dataset.chatId));
+  });
+
+  refs.chatMessages.innerHTML = (currentConversation?.messages || [])
+    .map((message) => {
+      const isUser = message.role === "user";
+      return `<div class="chat-row ${message.role}">
+        <div class="chat-avatar ${message.role}">${isUser ? "你" : ""}</div>
+        <div class="chat-body">
+          <div class="bubble ${message.role} ${message.pending ? "pending" : ""}">${renderMessageContent(message)}</div>
+        </div>
+      </div>`;
+    })
+    .join("");
+  refs.chatMessages.scrollTop = refs.chatMessages.scrollHeight;
 }
 
 function renderGraph() {
@@ -445,6 +473,66 @@ function skillCard(video, active) {
       <span>${video.action}</span>
     </div>
   </button>`;
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderMessageContent(message) {
+  if (message.role === "user") {
+    return escapeHtml(message.text);
+  }
+  return renderMarkdown(message.text || "");
+}
+
+function renderMarkdown(markdown) {
+  const escaped = escapeHtml(markdown);
+  const blocks = escaped.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+
+  return blocks
+    .map((block) => {
+      if (/^[-*]\s+/m.test(block)) {
+        const items = block
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => line.replace(/^[-*]\s+/, ""));
+        return `<ul>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`;
+      }
+
+      if (/^\d+\.\s+/m.test(block)) {
+        const items = block
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => line.replace(/^\d+\.\s+/, ""));
+        return `<ol>${items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ol>`;
+      }
+
+      if (block.startsWith("&gt;")) {
+        const quote = block
+          .split("\n")
+          .map((line) => line.replace(/^&gt;\s?/, ""))
+          .join("<br />");
+        return `<blockquote>${renderInlineMarkdown(quote)}</blockquote>`;
+      }
+
+      return `<p>${renderInlineMarkdown(block).replace(/\n/g, "<br />")}</p>`;
+    })
+    .join("");
+}
+
+function renderInlineMarkdown(text) {
+  return String(text || "")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
 }
 
 function setAuthMode(mode) {

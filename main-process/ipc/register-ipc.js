@@ -28,6 +28,8 @@ export function registerIpc({ engine, getAppWindow, getPetController, onState, o
   ipcMain.handle("demo:select-video", (_event, videoId) => engine.selectVideo(videoId));
   ipcMain.handle("demo:toggle-step", (_event, index) => engine.toggleChecklistStep(index));
   ipcMain.handle("demo:chat", (_event, question) => engine.sendChat(question));
+  ipcMain.handle("demo:new-chat", () => engine.newConversation());
+  ipcMain.handle("demo:select-chat", (_event, conversationId) => engine.selectConversation(conversationId));
   ipcMain.handle("demo:toggle-setting", (_event, key) => engine.toggleSetting(key));
   ipcMain.handle("demo:pet-action", (_event, action) => engine.handlePetAction(action));
   ipcMain.handle("pet:focus-action", async () => {

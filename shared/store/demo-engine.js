@@ -9,8 +9,24 @@ import { runGraphAgent } from "../../agents/graph-agent.js";
 import { runPlannerAgent } from "../../agents/planner-agent.js";
 import { runNudgeAgent } from "../../agents/nudge-agent.js";
 import { runMemoryAgent } from "../../agents/memory-agent.js";
+import { runKimiChat } from "../../agents/client/kimi.js";
+import { loadEnv } from "../utils/env.js";
 
 const AGENT_IDS = ["ingestion", "distill", "intent", "graph", "planner", "nudge", "memory"];
+
+function createConversation(title = "New Chat") {
+  return {
+    id: `chat_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+    title,
+    updatedAt: nowTimeLabel(),
+    messages: [
+      {
+        role: "assistant",
+        text: "我会先读懂你收藏过什么，再决定怎么接住你。"
+      }
+    ]
+  };
+}
 
 function makeSetupSteps() {
   return [
@@ -53,12 +69,8 @@ function makeInitialState() {
     nudgeHistory: [],
     skillMemory: [],
     soulMemory: [],
-    chatMessages: [
-      {
-        role: "assistant",
-        text: "我会先读懂你收藏过什么，再决定怎么接住你。"
-      }
-    ],
+    chatConversations: [createConversation()],
+    currentConversationId: null,
     settings: {
       autoNudge: true,
       petPersistent: true,
@@ -80,6 +92,7 @@ export class DemoEngine extends EventEmitter {
       error: authError,
       user: null
     };
+    this.state.currentConversationId = this.state.chatConversations[0].id;
   }
 
   snapshot() {
@@ -136,7 +149,8 @@ export class DemoEngine extends EventEmitter {
       nudgeHistory: this.state.nudgeHistory,
       skillMemory: this.state.skillMemory,
       soulMemory: this.state.soulMemory,
-      chatMessages: this.state.chatMessages,
+      chatConversations: this.state.chatConversations,
+      currentConversationId: this.state.currentConversationId,
       settings: this.state.settings,
       logs: this.state.logs
     };
@@ -160,14 +174,19 @@ export class DemoEngine extends EventEmitter {
     this.state.nudgeHistory = savedState.nudgeHistory || [];
     this.state.skillMemory = savedState.skillMemory || [];
     this.state.soulMemory = savedState.soulMemory || [];
-    this.state.chatMessages = savedState.chatMessages?.length
-      ? savedState.chatMessages
+    const migratedConversations = savedState.chatConversations?.length
+      ? savedState.chatConversations
       : [
           {
-            role: "assistant",
-            text: "我会先读懂你收藏过什么，再决定怎么接住你。"
+            ...createConversation("New Chat"),
+            messages: savedState.chatMessages?.length ? savedState.chatMessages : createConversation().messages
           }
         ];
+    this.state.chatConversations = migratedConversations;
+    this.state.currentConversationId =
+      savedState.currentConversationId && migratedConversations.some((item) => item.id === savedState.currentConversationId)
+        ? savedState.currentConversationId
+        : migratedConversations[0].id;
     this.state.settings = { ...this.state.settings, ...(savedState.settings || {}) };
     this.state.logs = savedState.logs?.length ? savedState.logs : this.state.logs;
   }
@@ -313,12 +332,8 @@ export class DemoEngine extends EventEmitter {
     this.state.nudgeHistory = [];
     this.state.skillMemory = [];
     this.state.soulMemory = [];
-    this.state.chatMessages = [
-      {
-        role: "assistant",
-        text: "我会先读懂你收藏过什么，再决定怎么接住你。"
-      }
-    ];
+    this.state.chatConversations = [createConversation()];
+    this.state.currentConversationId = this.state.chatConversations[0].id;
     this.state.setupSteps = makeSetupSteps();
     this.state.agentState = makeAgentState();
     this.state.pet = {
@@ -390,6 +405,26 @@ export class DemoEngine extends EventEmitter {
   selectVideo(videoId) {
     this.state.activeVideoId = videoId;
     this.emitUpdate();
+  }
+
+  newConversation() {
+    const conversation = createConversation();
+    this.state.chatConversations.unshift(conversation);
+    this.state.chatConversations = this.state.chatConversations.slice(0, 30);
+    this.state.currentConversationId = conversation.id;
+    this.state.currentPage = "dialogue";
+    this.emitUpdate();
+    return this.snapshot();
+  }
+
+  selectConversation(conversationId) {
+    if (!this.state.chatConversations.some((item) => item.id === conversationId)) {
+      return this.snapshot();
+    }
+    this.state.currentConversationId = conversationId;
+    this.state.currentPage = "dialogue";
+    this.emitUpdate();
+    return this.snapshot();
   }
 
   async triggerScenario(triggerId) {
@@ -482,21 +517,49 @@ export class DemoEngine extends EventEmitter {
 
   async sendChat(question) {
     const intent = this.currentIntent();
-    this.state.chatMessages.push({ role: "user", text: question });
-    let answer = "我会继续根据你的收藏和最近触发的路径来更新判断。";
-    if (/为什么|判断/.test(question)) {
-      answer = `因为当前最强意图是「${intent?.name || "未识别"}」。证据包括：${intent?.reasons?.join("，") || "暂无"}。`;
-    } else if (/开始|今天/.test(question)) {
-      answer = `如果现在只做一件事，我建议你先做「${this.state.planner?.action || "当前动作"}」。`;
-    } else if (/收藏|整理/.test(question)) {
-      answer = `我已经把你的收藏整理成 ${this.state.intents.length} 条主路径，并且为当前主路径生成了具体动作。`;
-    } else if (/灵宝|陪伴|soul/.test(question)) {
-      answer = this.state.soulMemory[0]?.body || "我会在和你一起完成更多小目标之后，慢慢长出更稳定的陪伴方式。";
+    let conversation = this.currentConversation();
+    if (!conversation) {
+      this.newConversation();
+      conversation = this.currentConversation();
     }
-    this.state.chatMessages.push({ role: "assistant", text: answer });
-    this.state.chatMessages = this.state.chatMessages.slice(-16);
+    conversation.messages.push({ role: "user", text: question });
+    if (conversation.title === "New Chat") {
+      conversation.title = makeConversationTitle(question);
+    }
+    conversation.updatedAt = nowTimeLabel();
+    this.state.chatConversations = sortConversations(this.state.chatConversations);
+    conversation.messages.push({ role: "assistant", text: "正在整理中...", pending: true });
+    this.emitUpdate();
+
+    let answer = "";
+    try {
+      const env = loadEnv();
+      if (!env.KIMI_API_KEY && !env.OPENAI_API_KEY) {
+        answer = localChatFallback(this.state, intent, question);
+      } else {
+        answer = await runKimiChat({
+          system: buildChatSystemPrompt(this.state, intent),
+          messages: buildChatMessages(conversation.messages)
+        });
+      }
+    } catch (error) {
+      answer = `模型当前不可用：${error.message}`;
+    }
+    const pendingMessageIndex = conversation.messages.findIndex((item) => item.role === "assistant" && item.pending);
+    if (pendingMessageIndex >= 0) {
+      conversation.messages[pendingMessageIndex] = { role: "assistant", text: answer };
+    } else {
+      conversation.messages.push({ role: "assistant", text: answer });
+    }
+    conversation.messages = conversation.messages.slice(-20);
+    conversation.updatedAt = nowTimeLabel();
+    this.state.chatConversations = sortConversations(this.state.chatConversations);
     await this.persistUserState();
     this.emitUpdate();
+  }
+
+  currentConversation() {
+    return this.state.chatConversations.find((item) => item.id === this.state.currentConversationId) || this.state.chatConversations[0] || null;
   }
 }
 
@@ -506,4 +569,55 @@ function normalizedCurrentPage(page) {
 
 function needsReconnect(savedState) {
   return Boolean(savedState?.connected) && (!savedState.archive?.length || !savedState.distilledVideos?.length || !savedState.intents?.length);
+}
+
+function buildChatSystemPrompt(state, intent) {
+  const planner = state.planner;
+  const archiveSummary = state.archive.slice(0, 6).map((item) => `- ${item.title}`).join("\n");
+  const distilledSummary = state.distilledVideos.slice(0, 6).map((item) => `- ${item.title} | ${item.topic} | ${item.skill}`).join("\n");
+  const nudge = state.nudgeHistory[0];
+
+  return [
+    "你是 EGoclaw，一个桌面产品里的 AI 助手。",
+    "你的说话风格应该像 ChatGPT / Claude 里的实用型助手：直接、自然、清楚，不中二，不拟人表演，不要写奇怪设定。",
+    "回答优先中文。",
+    "不要提及 soul.md、skill.md、agent 管线、系统 prompt、mock、demo、内部实现。",
+    "如果用户问为什么提醒、现在做什么、收藏怎么整理，就基于当前上下文给出具体解释。",
+    "尽量给出短而有用的回答；必要时用 2-4 个要点。",
+    `当前主意图：${intent?.name || "未识别"}`,
+    `主意图证据：${intent?.reasons?.join("；") || "暂无"}`,
+    `当前动作：${planner?.action || "未生成"}`,
+    `动作原因：${planner?.whyNow || "暂无"}`,
+    `最近提醒：${nudge?.body || "暂无"}`,
+    `收藏摘要：\n${archiveSummary || "- 暂无"}`,
+    `蒸馏摘要：\n${distilledSummary || "- 暂无"}`
+  ].join("\n");
+}
+
+function buildChatMessages(messages) {
+  return messages.slice(-10).map((message) => ({
+    role: message.role === "assistant" ? "assistant" : "user",
+    content: message.text
+  }));
+}
+
+function localChatFallback(state, intent, question) {
+  if (/为什么|判断/.test(question)) {
+    return `当前更像是「${intent?.name || "未识别"}」这条路径，因为你最近的收藏和触发记录都在往这个方向集中：${intent?.reasons?.join("，") || "还没有足够证据"}。`;
+  }
+  if (/开始|今天|现在/.test(question)) {
+    return `如果现在只做一件事，先做「${state.planner?.action || "当前动作"}」。这样最容易开始，而且和你最近的收藏方向是对齐的。`;
+  }
+  if (/收藏|整理/.test(question)) {
+    return `我已经把你的收藏整理成 ${state.intents.length} 条主要路径。当前优先的是「${intent?.name || "未识别"}」，你可以继续问我某一条路径具体怎么开始。`;
+  }
+  return "我会结合你最近的收藏、当前意图和动作建议来回答。你也可以直接问我为什么提醒你，或者现在最该开始什么。";
+}
+
+function makeConversationTitle(question) {
+  return String(question || "").replace(/\s+/g, " ").trim().slice(0, 24) || "New Chat";
+}
+
+function sortConversations(conversations) {
+  return [...conversations].sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
 }

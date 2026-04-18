@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("egoclawApp", {
   selectVideo: (videoId) => ipcRenderer.invoke("demo:select-video", videoId),
   toggleChecklistStep: (index) => ipcRenderer.invoke("demo:toggle-step", index),
   sendChat: (question) => ipcRenderer.invoke("demo:chat", question),
+  newChat: () => ipcRenderer.invoke("demo:new-chat"),
+  selectChat: (conversationId) => ipcRenderer.invoke("demo:select-chat", conversationId),
   toggleSetting: (key) => ipcRenderer.invoke("demo:toggle-setting", key),
   petAction: (action) => ipcRenderer.invoke("demo:pet-action", action),
   onState: (callback) => {

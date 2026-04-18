@@ -41,6 +41,7 @@
     <div class="app-shell">
       <header class="app-header">
         <div class="brand-word">EGoclaw.</div>
+        <nav id="nav-list" class="top-nav"></nav>
         <div class="header-meta">
           <span id="status-badge" class="status-meta">等待连接</span>
           <span id="user-badge" class="user-meta">未登录</span>
@@ -164,31 +165,41 @@
           </section>
         </section>
 
-        <section class="page" data-page="dialogue">
-          <div class="dialogue-shell">
-            <div class="dialogue-head">
-              <div>
-                <span class="meta-label">Direct Link</span>
-                <h2>Dialogue.</h2>
+        <section class="page page-dialogue" data-page="dialogue">
+          <div class="chat-shell">
+            <aside id="chat-history" class="chat-history">
+              <button id="toggle-chat-history" class="chat-history-rail" type="button" aria-label="切换历史记录">
+                <span class="chevron-mark">&lt;</span>
+              </button>
+              <div class="chat-history-head">
+                <button id="new-chat" class="editorial-button secondary" type="button">New Chat</button>
               </div>
-              <div class="dialogue-code">CH_01</div>
-            </div>
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="quick-row">
-              <button class="quick-question" data-question="为什么提醒我这个？" type="button">为什么提醒我这个？</button>
-              <button class="quick-question" data-question="把我的收藏整理一下" type="button">把我的收藏整理一下</button>
-              <button class="quick-question" data-question="我今天最该开始什么？" type="button">我今天最该开始什么？</button>
-            </div>
-            <div id="dialogue-detail" class="dialogue-detail"></div>
-            <form id="chat-form" class="chat-form">
-              <input id="chat-input" type="text" placeholder="输入问题" />
-              <button class="chat-submit" type="submit">发送</button>
-            </form>
+              <div id="chat-history-list" class="chat-history-list"></div>
+            </aside>
+            <section class="chat-panel">
+              <div class="chat-header">
+                <div>
+                  <span class="meta-label">AI Chat</span>
+                  <h2>EGoclaw</h2>
+                </div>
+                <div class="chat-code">GPT-5.4</div>
+              </div>
+              <div id="chat-messages" class="chat-messages"></div>
+              <div class="quick-row chat-quick-row">
+                <button class="quick-question" data-question="为什么提醒我这个？" type="button">为什么提醒我这个？</button>
+                <button class="quick-question" data-question="把我的收藏整理一下" type="button">把我的收藏整理一下</button>
+                <button class="quick-question" data-question="我今天最该开始什么？" type="button">我今天最该开始什么？</button>
+              </div>
+              <div class="chat-composer">
+                <form id="chat-form" class="chat-form">
+                  <input id="chat-input" type="text" placeholder="给 EGoclaw 发送消息" />
+                  <button class="chat-submit" type="submit">发送</button>
+                </form>
+              </div>
+            </section>
           </div>
         </section>
       </main>
-
-      <nav id="nav-list" class="bottom-nav"></nav>
     </div>
 
     <script type="module" src="./renderer/app.js"></script>

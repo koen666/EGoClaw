@@ -30,6 +30,10 @@ export function loadEnv() {
     ...localEnvFile
   };
   cachedEnv = {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY || fileEnv.OPENAI_API_KEY || "",
+    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL || fileEnv.OPENAI_BASE_URL || "",
+    OPENAI_MODEL: process.env.OPENAI_MODEL || fileEnv.OPENAI_MODEL || "gpt-5.4",
+    OPENAI_WIRE_API: process.env.OPENAI_WIRE_API || fileEnv.OPENAI_WIRE_API || "responses",
     KIMI_API_KEY: process.env.KIMI_API_KEY || fileEnv.KIMI_API_KEY || "",
     KIMI_BASE_URL: process.env.KIMI_BASE_URL || fileEnv.KIMI_BASE_URL || "https://api.moonshot.ai/v1",
     KIMI_MODEL: process.env.KIMI_MODEL || fileEnv.KIMI_MODEL || "kimi-k2",
