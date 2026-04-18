@@ -74,6 +74,7 @@ export class DemoEngine extends EventEmitter {
     super();
     this.state = makeInitialState();
     this.authService = authService;
+    this.persistScheduled = false;
     this.state.auth = {
       ready: authReady,
       error: authError,
@@ -87,6 +88,7 @@ export class DemoEngine extends EventEmitter {
 
   emitUpdate() {
     this.emit("state", this.snapshot());
+    this.schedulePersistUserState();
   }
 
   log(title, body) {
@@ -97,6 +99,77 @@ export class DemoEngine extends EventEmitter {
   updateAgent(id, status, output) {
     this.state.agentState[id] = { status, output };
     this.emitUpdate();
+  }
+
+  async persistUserState() {
+    if (!this.authService || !this.state.auth?.user?.id) return;
+    await this.authService.saveUserState(this.state.auth.user.id, this.serializableUserState());
+  }
+
+  schedulePersistUserState() {
+    if (this.persistScheduled || !this.authService || !this.state.auth?.user?.id) return;
+    this.persistScheduled = true;
+    queueMicrotask(async () => {
+      this.persistScheduled = false;
+      try {
+        await this.persistUserState();
+      } catch (error) {
+        console.error("persistUserState failed", error);
+      }
+    });
+  }
+
+  serializableUserState() {
+    return {
+      connected: this.state.connected,
+      currentPage: normalizedCurrentPage(this.state.currentPage),
+      activeVideoId: this.state.activeVideoId,
+      activeIntentId: this.state.activeIntentId,
+      setupSteps: this.state.setupSteps,
+      agentState: this.state.agentState,
+      archive: this.state.archive,
+      distilledVideos: this.state.distilledVideos,
+      intents: this.state.intents,
+      graph: this.state.graph,
+      planner: this.state.planner,
+      pet: this.state.pet,
+      nudgeHistory: this.state.nudgeHistory,
+      skillMemory: this.state.skillMemory,
+      soulMemory: this.state.soulMemory,
+      chatMessages: this.state.chatMessages,
+      settings: this.state.settings,
+      logs: this.state.logs
+    };
+  }
+
+  restoreUserState(savedState) {
+    if (!savedState) return;
+    this.state.connected = Boolean(savedState.connected);
+    this.state.processing = false;
+    this.state.currentPage = normalizedCurrentPage(savedState.currentPage);
+    this.state.activeVideoId = savedState.activeVideoId || null;
+    this.state.activeIntentId = savedState.activeIntentId || null;
+    this.state.setupSteps = savedState.setupSteps || makeSetupSteps();
+    this.state.agentState = savedState.agentState || makeAgentState();
+    this.state.archive = savedState.archive || [];
+    this.state.distilledVideos = savedState.distilledVideos || [];
+    this.state.intents = savedState.intents || [];
+    this.state.graph = savedState.graph || { nodes: [], edges: [] };
+    this.state.planner = savedState.planner || null;
+    this.state.pet = savedState.pet || this.state.pet;
+    this.state.nudgeHistory = savedState.nudgeHistory || [];
+    this.state.skillMemory = savedState.skillMemory || [];
+    this.state.soulMemory = savedState.soulMemory || [];
+    this.state.chatMessages = savedState.chatMessages?.length
+      ? savedState.chatMessages
+      : [
+          {
+            role: "assistant",
+            text: "我会先读懂你收藏过什么，再决定怎么接住你。"
+          }
+        ];
+    this.state.settings = { ...this.state.settings, ...(savedState.settings || {}) };
+    this.state.logs = savedState.logs?.length ? savedState.logs : this.state.logs;
   }
 
   async connectDemo() {
@@ -182,6 +255,13 @@ export class DemoEngine extends EventEmitter {
       const user = await this.authService.register(payload);
       this.state.auth.user = user;
       this.state.auth.error = null;
+      const savedState = await this.authService.loadUserState(user.id);
+      if (savedState) {
+        this.restoreUserState(savedState);
+        if (needsReconnect(savedState)) {
+          return this.connectDemo();
+        }
+      }
       this.log("认证", `注册成功并已登录：${user.username}`);
     } catch (error) {
       this.state.auth.error = error.message;
@@ -201,6 +281,13 @@ export class DemoEngine extends EventEmitter {
       const user = await this.authService.login(payload);
       this.state.auth.user = user;
       this.state.auth.error = null;
+      const savedState = await this.authService.loadUserState(user.id);
+      if (savedState) {
+        this.restoreUserState(savedState);
+        if (needsReconnect(savedState)) {
+          return this.connectDemo();
+        }
+      }
       this.log("认证", `登录成功：${user.username}`);
     } catch (error) {
       this.state.auth.error = error.message;
@@ -362,13 +449,13 @@ export class DemoEngine extends EventEmitter {
     this.emitUpdate();
   }
 
-  toggleSetting(key) {
+  async toggleSetting(key) {
     this.state.settings[key] = !this.state.settings[key];
     this.log("设置", `${key} -> ${this.state.settings[key] ? "on" : "off"}`);
     this.emitUpdate();
   }
 
-  toggleChecklistStep(index) {
+  async toggleChecklistStep(index) {
     if (!this.state.planner) return;
     const intentId = this.currentIntent()?.id;
     if (!intentId) return;
@@ -393,7 +480,7 @@ export class DemoEngine extends EventEmitter {
     this.emitUpdate();
   }
 
-  sendChat(question) {
+  async sendChat(question) {
     const intent = this.currentIntent();
     this.state.chatMessages.push({ role: "user", text: question });
     let answer = "我会继续根据你的收藏和最近触发的路径来更新判断。";
@@ -408,6 +495,15 @@ export class DemoEngine extends EventEmitter {
     }
     this.state.chatMessages.push({ role: "assistant", text: answer });
     this.state.chatMessages = this.state.chatMessages.slice(-16);
+    await this.persistUserState();
     this.emitUpdate();
   }
+}
+
+function normalizedCurrentPage(page) {
+  return ["home", "map", "distill", "dialogue"].includes(page) ? page : "home";
+}
+
+function needsReconnect(savedState) {
+  return Boolean(savedState?.connected) && (!savedState.archive?.length || !savedState.distilledVideos?.length || !savedState.intents?.length);
 }

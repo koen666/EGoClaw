@@ -85,4 +85,24 @@ export class AuthService {
       created_at: user.created_at
     };
   }
+
+  async loadUserState(userId) {
+    const [rows] = await this.pool.query(
+      "SELECT state_json FROM user_states WHERE user_id = ? LIMIT 1",
+      [userId]
+    );
+    if (!rows[0]?.state_json) return null;
+    return JSON.parse(rows[0].state_json);
+  }
+
+  async saveUserState(userId, state) {
+    await this.pool.query(
+      `
+        INSERT INTO user_states (user_id, state_json)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE state_json = VALUES(state_json)
+      `,
+      [userId, JSON.stringify(state)]
+    );
+  }
 }

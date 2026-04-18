@@ -36,5 +36,15 @@ export async function initMySQL() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_states (
+      user_id BIGINT PRIMARY KEY,
+      state_json LONGTEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT fk_user_states_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   return pool;
 }
